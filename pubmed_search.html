@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PubMed 論文検索</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #2b6cb0;
+      color: white;
+      padding: 20px 32px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    header h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+    header p  { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+
+    .search-area {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 20px 32px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #keyword-input {
+      flex: 1;
+      min-width: 240px;
+      padding: 11px 16px;
+      border: 2px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #keyword-input:focus { border-color: #2b6cb0; }
+
+    #search-btn {
+      padding: 11px 28px;
+      background: #2b6cb0;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    #search-btn:hover    { background: #2c5282; }
+    #search-btn:disabled { background: #90cdf4; cursor: not-allowed; }
+
+    #copy-btn {
+      padding: 11px 22px;
+      background: #276749;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+      display: none;
+    }
+
+    #copy-btn:hover  { background: #22543d; }
+    #copy-btn.copied { background: #38a169; }
+
+    /* ── 論文種別フィルター ── */
+    .filter-area {
+      background: #f7fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 12px 32px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .filter-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #718096;
+      white-space: nowrap;
+      padding-top: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .pt-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pt-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 20px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      color: #4a5568;
+      user-select: none;
+      transition: all 0.15s;
+    }
+
+    .pt-chip:hover { border-color: #90cdf4; background: #ebf8ff; }
+
+    .pt-chip input[type="checkbox"] {
+      width: 13px;
+      height: 13px;
+      cursor: pointer;
+      accent-color: #2b6cb0;
+      flex-shrink: 0;
+    }
+
+    .pt-chip.selected {
+      border-color: #2b6cb0;
+      background: #ebf8ff;
+      color: #2b6cb0;
+      font-weight: 700;
+    }
+
+    .pt-chip.chip-all.selected {
+      border-color: #718096;
+      background: #e2e8f0;
+      color: #2d3748;
+    }
+
+    /* ── カード ── */
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    #status {
+      text-align: center;
+      color: #718096;
+      font-size: 15px;
+      margin: 40px 0;
+    }
+
+    #result-count {
+      font-size: 14px;
+      color: #4a5568;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .article-card {
+      background: white;
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      border-left: 4px solid #2b6cb0;
+    }
+
+    .article-card.match-full    { border-left-color: #276749; }
+    .article-card.match-partial { border-left-color: #c05621; }
+    .article-card.match-single  { border-left-color: #2b6cb0; }
+
+    .article-number {
+      font-size: 12px;
+      font-weight: 700;
+      color: #2b6cb0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .copy-single-btn {
+      margin-left: auto;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #4a5568;
+      background: #edf2f7;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      text-transform: none;
+      letter-spacing: 0;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .copy-single-btn:hover  { background: #e2e8f0; color: #1a202c; }
+    .copy-single-btn.copied { background: #c6f6d5; color: #22543d; border-color: #9ae6b4; }
+
+    .match-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .badge-full    { background: #c6f6d5; color: #22543d; }
+    .badge-partial { background: #feebc8; color: #7b341e; }
+    .badge-single  { background: #bee3f8; color: #2a4365; }
+
+    .article-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1a202c;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .article-abstract { font-size: 14px; color: #4a5568; line-height: 1.75; }
+    .no-abstract      { font-size: 14px; color: #a0aec0; font-style: italic; }
+
+    .spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid #bee3f8;
+      border-top-color: #2b6cb0;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-wrap { text-align: center; padding: 60px 0; }
+    .loading-wrap p { color: #4a5568; font-size: 15px; }
+
+    .error-box {
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      border-radius: 8px;
+      padding: 16px 20px;
+      color: #c53030;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>PubMed 論文検索</h1>
+  <p>キーワードをスペースまたはカンマで区切って複数入力できます。先に書いたキーワードが優先されます。</p>
+</header>
+
+<!-- キーワード入力 -->
+<div class="search-area">
+  <input type="text" id="keyword-input"
+    placeholder="例: heart failure COVID-19  /  diabetes hypertension elderly  /  sepsis ICU management" />
+  <button id="search-btn" onclick="startSearch()">検索</button>
+  <button id="copy-btn" onclick="copyAll()">全文コピー</button>
+</div>
+
+<!-- 論文種別フィルター -->
+<div class="filter-area">
+  <div class="filter-label">論文種別</div>
+  <div class="pt-list" id="pt-list"></div>
+</div>
+
+<div class="main">
+  <div id="status">キーワードを入力して検索してください。</div>
+  <div id="result-count" style="display:none;"></div>
+  <div id="results"></div>
+</div>
+
+<script>
+  const EMAIL = 'minnanozaitaku921@gmail.com';
+  const BASE  = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
+  let articlesData = [];
+
+  /* ── 論文種別定義
+       query: PubMedに渡す絞り込みクエリ（NOT条件で他種別を明示除外）
+       null = フィルターなし
+  ── */
+  const PUB_TYPES = [
+    { id: 'pt-all',
+      label: '全て',
+      query: null },
+    { id: 'pt-original',
+      label: '原著論文',
+      // Journal Articleのうち、レビュー・ケースレポートなど他種別を除外
+      query: 'Journal Article[pt] NOT (Review[pt] OR Meta-Analysis[pt] OR "Systematic Review"[pt] OR "Case Reports"[pt] OR Letter[pt] OR Editorial[pt] OR Comment[pt] OR Guideline[pt] OR "Observational Study"[pt])' },
+    { id: 'pt-case',
+      label: 'ケースレポート・症例報告',
+      query: '"Case Reports"[pt]' },
+    { id: 'pt-meta',
+      label: 'メタ解析',
+      query: '"Meta-Analysis"[pt]' },
+    { id: 'pt-sr',
+      label: 'システマティックレビュー',
+      query: '"Systematic Review"[pt]' },
+    { id: 'pt-rct',
+      label: 'ランダム化比較試験（RCT）',
+      query: '"Randomized Controlled Trial"[pt]' },
+    { id: 'pt-review',
+      label: 'レビュー',
+      // 通常レビュー（メタ解析・SRは除く）
+      query: 'Review[pt] NOT ("Meta-Analysis"[pt] OR "Systematic Review"[pt])' },
+    { id: 'pt-ct',
+      label: '臨床試験',
+      query: '"Clinical Trial"[pt]' },
+    { id: 'pt-guideline',
+      label: 'ガイドライン',
+      query: 'Guideline[pt]' },
+    { id: 'pt-obs',
+      label: '観察研究',
+      query: '"Observational Study"[pt]' },
+  ];
+
+  /* チップ生成 */
+  (function buildChips() {
+    const list = document.getElementById('pt-list');
+    PUB_TYPES.forEach(pt => {
+      const chip = document.createElement('label');
+      chip.className = 'pt-chip' + (pt.query === null ? ' chip-all selected' : '');
+      chip.htmlFor = pt.id;
+
+      const cb = document.createElement('input');
+      cb.type    = 'checkbox';
+      cb.id      = pt.id;
+      cb.checked = (pt.query === null);
+      if (pt.query) {
+        cb.dataset.ptQuery = pt.query;
+        cb.dataset.ptLabel = pt.label;
+      }
+
+      cb.addEventListener('change', () => onChipChange(pt));
+      chip.appendChild(cb);
+      chip.appendChild(document.createTextNode(pt.label));
+      list.appendChild(chip);
+    });
+  })();
+
+  function onChipChange(pt) {
+    const allCb = document.getElementById('pt-all');
+    if (pt.query === null) {
+      // 「全て」→ 他を全解除
+      document.querySelectorAll('#pt-list input[data-pt-query]').forEach(cb => {
+        cb.checked = false;
+        cb.closest('.pt-chip').classList.remove('selected');
+      });
+      allCb.checked = true;
+      allCb.closest('.pt-chip').classList.add('selected');
+    } else {
+      // 個別種別 → 「全て」を解除
+      allCb.checked = false;
+      allCb.closest('.pt-chip').classList.remove('selected');
+
+      // 全個別が外れた場合は「全て」に戻す
+      const anyChecked = [...document.querySelectorAll('#pt-list input[data-pt-query]')].some(cb => cb.checked);
+      if (!anyChecked) {
+        allCb.checked = true;
+        allCb.closest('.pt-chip').classList.add('selected');
+      }
+    }
+    // チップの selected クラス更新
+    document.querySelectorAll('#pt-list input[data-pt-query]').forEach(cb => {
+      cb.closest('.pt-chip').classList.toggle('selected', cb.checked);
+    });
+  }
+
+  /* 選択中の Publication Type フィルター文字列を返す（null = 全て） */
+  function getSelectedPubTypeFilter() {
+    if (document.getElementById('pt-all').checked) return null;
+    const queries = [...document.querySelectorAll('#pt-list input[data-pt-query]:checked')]
+      .map(cb => `(${cb.dataset.ptQuery})`);
+    if (queries.length === 0) return null;
+    // 複数選択はOR結合
+    return queries.length === 1 ? queries[0] : `(${queries.join(' OR ')})`;
+  }
+
+  /* ── 検索ロジック ── */
+  document.getElementById('keyword-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startSearch();
+  });
+
+  function parseKeywords(input) {
+    return input
+      .replace(/　/g, ' ')
+      .split(/[\s,、，]+/)
+      .map(k => k.trim())
+      .filter(k => k.length > 0);
+  }
+
+  async function esearchIds(query, retmax = 50) {
+    const url = `${BASE}esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=${retmax}&sort=pub+date&retmode=json&email=${encodeURIComponent(EMAIL)}&tool=pubmed-search-app`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.esearchresult.idlist || [];
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function buildPriorityGroups(keywords, pubTypeFilter) {
+    const seenIds = new Set();
+    const groups  = [];
+
+    for (let n = keywords.length; n >= 1; n--) {
+      let query = keywords.slice(0, n).join(' AND ');
+      if (pubTypeFilter) query += ` AND ${pubTypeFilter}`;
+
+      const step = keywords.length - n + 1;
+      showLoading(`検索中 (${step}/${keywords.length})：${keywords.slice(0, n).join(' AND ')}`);
+
+      const ids    = await esearchIds(query, 60);
+      const newIds = ids.filter(id => !seenIds.has(id));
+      newIds.forEach(id => seenIds.add(id));
+      groups.push({ ids: newIds, matchCount: n, total: keywords.length });
+
+      if (n > 1) await sleep(350);
+    }
+
+    return groups;
+  }
+
+  async function startSearch() {
+    const input = document.getElementById('keyword-input').value.trim();
+    if (!input) return;
+
+    const keywords      = parseKeywords(input);
+    if (keywords.length === 0) return;
+    const pubTypeFilter = getSelectedPubTypeFilter();
+
+    const btn = document.getElementById('search-btn');
+    btn.disabled = true;
+    document.getElementById('copy-btn').style.display = 'none';
+    document.getElementById('result-count').style.display = 'none';
+    document.getElementById('results').innerHTML = '';
+    articlesData = [];
+
+    try {
+      const groups = await buildPriorityGroups(keywords, pubTypeFilter);
+
+      const orderedIds  = [];
+      const idGroupMap  = {};
+      for (const g of groups) {
+        for (const id of g.ids) {
+          if (orderedIds.length < 30) {
+            orderedIds.push(id);
+            idGroupMap[id] = g;
+          }
+        }
+      }
+
+      if (orderedIds.length === 0) {
+        showStatus('該当する論文が見つかりませんでした。');
+        btn.disabled = false;
+        return;
+      }
+
+      showLoading(`${orderedIds.length}件の論文データを取得中...`);
+
+      const fetchUrl = `${BASE}efetch.fcgi?db=pubmed&id=${orderedIds.join(',')}&rettype=xml&retmode=xml&email=${encodeURIComponent(EMAIL)}&tool=pubmed-search-app`;
+      const fetchRes = await fetch(fetchUrl);
+      if (!fetchRes.ok) throw new Error(`論文取得エラー: HTTP ${fetchRes.status}`);
+      const xmlText = await fetchRes.text();
+
+      const parsed    = parseXML(xmlText);
+      const parsedMap = {};
+      parsed.forEach(a => { if (a.pmid) parsedMap[a.pmid] = a; });
+
+      articlesData = orderedIds.map(id => {
+        const art = parsedMap[id] || parsed.shift();
+        if (!art) return null;
+        const g = idGroupMap[id] || { matchCount: 1, total: keywords.length };
+        return { ...art, matchCount: g.matchCount, total: g.total };
+      }).filter(Boolean);
+
+      renderResults(articlesData, keywords, pubTypeFilter);
+
+    } catch (err) {
+      showError(err.message);
+    }
+
+    btn.disabled = false;
+  }
+
+  function parseXML(xmlText) {
+    const parser = new DOMParser();
+    const doc    = parser.parseFromString(xmlText, 'text/xml');
+    return Array.from(doc.querySelectorAll('PubmedArticle')).map(article => {
+      const pmidEl = article.querySelector('PMID');
+      const pmid   = pmidEl ? pmidEl.textContent.trim() : null;
+
+      const titleEl = article.querySelector('ArticleTitle');
+      const title   = titleEl ? titleEl.textContent.trim() : '(タイトルなし)';
+
+      const abstractTexts = article.querySelectorAll('Abstract AbstractText');
+      let abstract = null;
+      if (abstractTexts.length > 0) {
+        abstract = Array.from(abstractTexts).map(el => {
+          const label = el.getAttribute('Label');
+          const text  = el.textContent.trim();
+          return label ? `${label}: ${text}` : text;
+        }).join(' ').trim();
+      }
+
+      return { pmid, title, abstract };
+    });
+  }
+
+  /* ── 描画 ── */
+  function renderResults(articles, keywords, pubTypeFilter) {
+    document.getElementById('status').style.display = 'none';
+
+    const kwLabel  = keywords.join('  /  ');
+    const ptLabel  = pubTypeFilter
+      ? '  ｜  ' + [...document.querySelectorAll('#pt-list input[data-pt-query]:checked')]
+          .map(cb => cb.dataset.ptLabel).join('・')
+      : '';
+
+    const countEl = document.getElementById('result-count');
+    countEl.style.display = 'block';
+    countEl.textContent = `「${kwLabel}」${ptLabel}  の検索結果: ${articles.length}件（優先度順）`;
+
+    const container = document.getElementById('results');
+    container.innerHTML = '';
+
+    articles.forEach((art, i) => {
+      const isMulti = art.total > 1;
+      const isFull  = isMulti && art.matchCount === art.total;
+      const isSingle= art.matchCount === 1;
+
+      const card = document.createElement('div');
+      card.className = 'article-card ' + (
+        !isMulti ? 'match-single' :
+        isFull   ? 'match-full'   :
+        isSingle ? 'match-single' : 'match-partial'
+      );
+
+      const numRow = document.createElement('div');
+      numRow.className = 'article-number';
+      numRow.textContent = `論文 ${i + 1}`;
+
+      if (isMulti) {
+        const badge = document.createElement('span');
+        badge.className = 'match-badge ' + (
+          isFull   ? 'badge-full'    :
+          isSingle ? 'badge-single'  : 'badge-partial'
+        );
+        badge.textContent = isFull
+          ? `全${art.total}キーワード一致`
+          : `${art.matchCount}/${art.total}キーワード一致`;
+        numRow.appendChild(badge);
+      }
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-single-btn';
+      copyBtn.textContent = 'コピー';
+      copyBtn.onclick = async () => {
+        const text = `${art.title}\n${art.abstract || 'アブストラクトなし'}`;
+        try { await navigator.clipboard.writeText(text); }
+        catch {
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.top = '-9999px';
+          document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        copyBtn.textContent = 'コピーしました ✓';
+        copyBtn.classList.add('copied');
+        setTimeout(() => { copyBtn.textContent = 'コピー'; copyBtn.classList.remove('copied'); }, 2000);
+      };
+      numRow.appendChild(copyBtn);
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'article-title';
+      titleEl.textContent = art.title;
+
+      card.appendChild(numRow);
+      card.appendChild(titleEl);
+
+      if (art.abstract) {
+        const absEl = document.createElement('div');
+        absEl.className = 'article-abstract';
+        absEl.textContent = art.abstract;
+        card.appendChild(absEl);
+      } else {
+        const noAbs = document.createElement('div');
+        noAbs.className = 'no-abstract';
+        noAbs.textContent = 'アブストラクトなし';
+        card.appendChild(noAbs);
+      }
+
+      container.appendChild(card);
+    });
+
+    document.getElementById('copy-btn').style.display = 'inline-block';
+    document.getElementById('copy-btn').textContent = '全文コピー';
+    document.getElementById('copy-btn').classList.remove('copied');
+  }
+
+  async function copyAll() {
+    if (articlesData.length === 0) return;
+    const lines = articlesData.map(art =>
+      `${art.title}\n${art.abstract || 'アブストラクトなし'}`
+    ).join('\n\n');
+
+    const btn = document.getElementById('copy-btn');
+    try { await navigator.clipboard.writeText(lines); }
+    catch {
+      const ta = document.createElement('textarea');
+      ta.value = lines; ta.style.position = 'fixed'; ta.style.top = '-9999px';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    btn.textContent = 'コピーしました ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '全文コピー'; btn.classList.remove('copied'); }, 2500);
+  }
+
+  function showLoading(msg) {
+    const s = document.getElementById('status');
+    s.style.display = 'block';
+    s.innerHTML = `<div class="loading-wrap"><div class="spinner"></div><p>${msg}</p></div>`;
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('result-count').style.display = 'none';
+  }
+
+  function showStatus(msg) {
+    const s = document.getElementById('status');
+    s.style.display = 'block';
+    s.innerHTML = msg;
+  }
+
+  function showError(msg) {
+    const s = document.getElementById('status');
+    s.style.display = 'block';
+    s.innerHTML = `<div class="error-box">エラーが発生しました: ${msg}<br><small>ネットワーク接続を確認してください。</small></div>`;
+  }
+</script>
+</body>
+</html>

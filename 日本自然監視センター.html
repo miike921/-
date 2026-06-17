@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🗻 日本自然監視センター</title>
+<style>
+:root{
+  --bg:#060b14; --panel:#0d1526; --card:#111d30;
+  --border:#1e3050; --cyan:#00d4ff; --orange:#ff6b35;
+  --green:#00ff88; --text:#c8d8f0; --muted:#506888; --red:#ff3344;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,'Hiragino Sans','YuGothic',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* HEADER */
+header{background:var(--panel);border-bottom:1px solid var(--border);padding:0 24px;height:54px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--orange),transparent);}
+.logo{font-size:1.1em;font-weight:700;color:var(--cyan);}
+.live-badge{display:flex;align-items:center;gap:6px;font-size:.72em;color:var(--green);font-weight:700;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pg 1.5s ease-in-out infinite;}
+@keyframes pg{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.6);}50%{box-shadow:0 0 0 6px rgba(0,255,136,0);}}
+.clock{margin-left:auto;font-size:.85em;color:var(--muted);}
+.btn-open-all{padding:6px 16px;border-radius:18px;border:1px solid var(--cyan);background:rgba(0,212,255,.1);color:var(--cyan);font-size:.78em;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn-open-all:hover{background:rgba(0,212,255,.25);}
+
+/* ADD PANEL */
+.add-panel{background:var(--panel);border-bottom:1px solid var(--border);padding:16px 24px;}
+.add-title{font-size:.78em;color:var(--muted);margin-bottom:10px;}
+.add-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.inp{padding:9px 14px;border-radius:22px;border:1px solid var(--border);background:rgba(0,0,0,.3);color:var(--text);font-size:.88em;outline:none;transition:border-color .2s;}
+.inp:focus{border-color:var(--cyan);}
+.inp-url{flex:1;min-width:240px;}
+.inp-name{width:150px;}
+.inp-emoji{width:68px;text-align:center;}
+.btn-add{padding:9px 22px;border-radius:22px;border:none;background:var(--cyan);color:#000;font-size:.88em;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn-add:hover{opacity:.85;}
+.add-hint{font-size:.72em;color:var(--muted);margin-top:8px;line-height:1.6;}
+.suggest-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;}
+.suggest-label{font-size:.72em;color:var(--muted);white-space:nowrap;}
+.sug{padding:4px 12px;border-radius:14px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.72em;cursor:pointer;transition:all .15s;text-decoration:none;display:inline-block;}
+.sug:hover{border-color:var(--cyan);color:var(--cyan);}
+
+/* MAIN */
+.main{padding:20px 24px;}
+.grid-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.grid-title{font-size:.8em;color:var(--muted);}
+.cam-count{font-size:.78em;color:var(--cyan);font-weight:700;}
+.btn-clear{margin-left:auto;padding:5px 13px;border-radius:14px;border:1px solid rgba(255,51,68,.3);background:none;color:var(--red);font-size:.72em;cursor:pointer;}
+.btn-clear:hover{background:rgba(255,51,68,.1);}
+
+.cam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+
+/* CARD */
+.cam-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:transform .15s,border-color .2s;cursor:pointer;}
+.cam-card:hover{transform:translateY(-3px);border-color:rgba(0,212,255,.4);}
+
+/* サムネイル */
+.cam-thumb{position:relative;width:100%;padding-top:56.25%;background:#000;overflow:hidden;}
+.cam-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .3s;}
+.cam-card:hover .cam-thumb img{transform:scale(1.04);}
+.thumb-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(6,11,20,.9) 0%,transparent 55%);display:flex;align-items:flex-end;padding:14px;}
+.play-circle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(255,0,0,.85);display:flex;align-items:center;justify-content:center;font-size:1.3em;opacity:0;transition:opacity .2s;}
+.cam-card:hover .play-circle{opacity:1;}
+.thumb-title{font-size:.82em;color:#fff;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.8);}
+
+/* INFO */
+.cam-info{padding:10px 13px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);}
+.cam-emoji-d{font-size:1.2em;}
+.cam-nm{font-size:.85em;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-del{background:none;border:none;color:var(--muted);font-size:1em;cursor:pointer;padding:3px 7px;border-radius:6px;transition:all .15s;line-height:1;}
+.btn-del:hover{color:var(--red);background:rgba(255,51,68,.1);}
+.btn-yt{padding:5px 12px;border-radius:12px;border:1px solid rgba(255,51,51,.3);background:rgba(255,0,0,.08);color:#ff7777;font-size:.72em;text-decoration:none;transition:all .15s;white-space:nowrap;}
+.btn-yt:hover{background:rgba(255,0,0,.18);border-color:#ff4444;}
+
+/* EMPTY */
+.empty{text-align:center;padding:80px 20px;color:var(--muted);}
+.empty-icon{font-size:4em;margin-bottom:20px;opacity:.3;}
+.empty-title{font-size:1.05em;color:var(--text);margin-bottom:12px;}
+.empty-msg{font-size:.83em;line-height:1.9;}
+.empty-step{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:20px auto;max-width:480px;text-align:left;font-size:.83em;line-height:1.9;}
+.empty-step b{color:var(--cyan);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🗻 日本自然監視センター</div>
+  <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+  <button class="btn-open-all" id="btn-open-all" onclick="openAll()" style="display:none">▶ 全カメラをYouTubeで開く</button>
+  <div class="clock" id="clock"></div>
+</header>
+
+<div class="add-panel">
+  <div class="add-title">📌 カメラを追加 — YouTubeのURLを貼り付けてください</div>
+  <div class="add-row">
+    <input class="inp inp-url" id="inp-url" type="text" placeholder="https://www.youtube.com/watch?v=...">
+    <input class="inp inp-name" id="inp-name" type="text" placeholder="名前（例：桜島）">
+    <input class="inp inp-emoji" id="inp-emoji" type="text" placeholder="🌋" maxlength="2">
+    <button class="btn-add" onclick="addCamera()">＋ 追加</button>
+  </div>
+  <div class="add-hint">
+    ① 下の検索ボタンでYouTubeを開く → ② 見たい動画のURLをコピー → ③ 上の入力欄に貼り付けて追加<br>
+    カードをクリックするとYouTubeで映像が開きます。
+  </div>
+  <div class="suggest-row">
+    <span class="suggest-label">🔍 YouTube検索：</span>
+    <a class="sug" href="https://www.youtube.com/results?search_query=桜島+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🌋 桜島</a>
+    <a class="sug" href="https://www.youtube.com/results?search_query=阿蘇山+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🌋 阿蘇山</a>
+    <a class="sug" href="https://www.youtube.com/results?search_query=富士山+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🗻 富士山</a>
+    <a class="sug" href="https://www.youtube.com/results?search_query=御嶽山+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🌋 御嶽山</a>
+    <a class="sug" href="https://www.youtube.com/results?search_query=浅間山+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🌋 浅間山</a>
+    <a class="sug" href="https://www.youtube.com/results?search_query=北アルプス+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🗻 北アルプス</a>
+    <a class="sug" href="https://www.youtube.com/results?search_query=立山+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🗻 立山</a>
+    <a class="sug" href="https://www.youtube.com/results?search_query=沖縄+海+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🌊 沖縄の海</a>
+    <a class="sug" href="https://www.youtube.com/results?search_query=霧島山+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🌋 霧島山</a>
+    <a class="sug" href="https://www.youtube.com/results?search_query=石垣島+ライブカメラ&sp=EgJAAQ%3D%3D" target="_blank">🌊 石垣島</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="grid-header">
+    <span class="grid-title">登録済みカメラ</span>
+    <span class="cam-count" id="cam-count">0 件</span>
+    <button class="btn-clear" onclick="clearAll()">🗑 すべて削除</button>
+  </div>
+  <div class="cam-grid" id="grid"></div>
+  <div class="empty" id="empty">
+    <div class="empty-icon">📷</div>
+    <div class="empty-title">カメラがまだ登録されていません</div>
+    <div class="empty-step">
+      <b>① YouTubeを開く</b><br>
+      上の「🌋 桜島」などのボタンをクリックするとYouTubeで検索できます。<br><br>
+      <b>② 動画のURLをコピー</b><br>
+      見たいライブカメラ動画を開き、ブラウザのアドレスバーのURLをコピー。<br><br>
+      <b>③ 貼り付けて追加</b><br>
+      上の入力欄にペーストし、名前を入力して「＋ 追加」を押す。<br><br>
+      <b>④ カードをクリック → YouTubeで映像を表示</b>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE = 'nat_cams_v2';
+
+function loadCams(){ return JSON.parse(localStorage.getItem(STORE)||'[]'); }
+function saveCams(list){ localStorage.setItem(STORE, JSON.stringify(list)); }
+
+function extractVideoId(url){
+  url = url.trim();
+  let m;
+  m = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/); if(m) return m[1];
+  m = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);       if(m) return m[1];
+  m = url.match(/\/live\/([a-zA-Z0-9_-]{11})/);      if(m) return m[1];
+  m = url.match(/\/embed\/([a-zA-Z0-9_-]{11})/);     if(m) return m[1];
+  m = url.match(/^([a-zA-Z0-9_-]{11})$/);            if(m) return m[1];
+  return null;
+}
+
+function addCamera(){
+  const urlVal  = document.getElementById('inp-url').value.trim();
+  const nameVal = document.getElementById('inp-name').value.trim();
+  const emoji   = document.getElementById('inp-emoji').value.trim();
+  if(!urlVal){ alert('YouTubeのURLを入力してください'); return; }
+  const vid = extractVideoId(urlVal);
+  if(!vid){ alert('YouTubeのURLが正しくありません。\n動画を開いたときのURLをそのままコピーしてください。'); return; }
+  const list = loadCams();
+  if(list.find(c=>c.videoId===vid)){ alert('このカメラはすでに登録されています'); return; }
+  list.push({ id:Date.now().toString(), videoId:vid, name:nameVal||'名称未設定', emoji:emoji||'📷',
+               url:urlVal, addedAt:new Date().toLocaleString('ja-JP') });
+  saveCams(list);
+  document.getElementById('inp-url').value='';
+  document.getElementById('inp-name').value='';
+  document.getElementById('inp-emoji').value='';
+  renderGrid();
+}
+
+function deleteCamera(id, e){
+  e.stopPropagation();
+  const list = loadCams().filter(c=>c.id!==id);
+  saveCams(list);
+  renderGrid();
+}
+
+function clearAll(){
+  if(!confirm('登録済みのカメラをすべて削除しますか？')) return;
+  saveCams([]); renderGrid();
+}
+
+function openCamera(videoId){
+  window.open('https://www.youtube.com/watch?v='+videoId, '_blank');
+}
+
+function openAll(){
+  const list = loadCams();
+  if(!list.length){ alert('カメラが登録されていません'); return; }
+  list.forEach(c => window.open('https://www.youtube.com/watch?v='+c.videoId, '_blank'));
+}
+
+function thumbUrl(videoId){
+  return 'https://i.ytimg.com/vi/'+videoId+'/mqdefault.jpg';
+}
+
+function renderGrid(){
+  const list = loadCams();
+  const grid  = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+  document.getElementById('cam-count').textContent = list.length+' 件';
+  document.getElementById('btn-open-all').style.display = list.length ? 'block' : 'none';
+
+  if(!list.length){ grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  grid.innerHTML = list.map(c=>`
+    <div class="cam-card" onclick="openCamera('${c.videoId}')">
+      <div class="cam-thumb">
+        <img src="${thumbUrl(c.videoId)}" alt="${c.name}"
+             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22><rect fill=%22%23111d30%22 width=%22320%22 height=%22180%22/><text x=%22160%22 y=%2295%22 text-anchor=%22middle%22 fill=%22%23506888%22 font-size=%2240%22>${c.emoji}</text></svg>'">
+        <div class="thumb-overlay">
+          <span class="thumb-title">${c.name}</span>
+        </div>
+        <div class="play-circle">▶</div>
+      </div>
+      <div class="cam-info">
+        <span class="cam-emoji-d">${c.emoji}</span>
+        <span class="cam-nm">${c.name}</span>
+        <a class="btn-yt" href="https://www.youtube.com/watch?v=${c.videoId}" target="_blank" onclick="event.stopPropagation()">YouTube</a>
+        <button class="btn-del" onclick="deleteCamera('${c.id}',event)" title="削除">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+document.getElementById('inp-url').addEventListener('keydown', e=>{ if(e.key==='Enter') addCamera(); });
+document.getElementById('inp-name').addEventListener('keydown', e=>{ if(e.key==='Enter') addCamera(); });
+
+setInterval(()=>{
+  const n=new Date();
+  document.getElementById('clock').textContent=
+    n.toLocaleString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+' JST';
+},1000);
+
+renderGrid();
+</script>
+</body>
+</html>

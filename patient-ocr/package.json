@@ -1,0 +1,12 @@
+{
+  "name": "patient-ocr",
+  "version": "1.0.0",
+  "description": "患者一覧スクリーンショットからID・氏名を抽出するOCRアプリ",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

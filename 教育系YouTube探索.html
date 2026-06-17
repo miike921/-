@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教育系YouTubeチャンネル探索</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            min-height: 100vh;
+        }
+        header {
+            background: #1a1a2e;
+            padding: 24px 20px;
+            text-align: center;
+            border-bottom: 3px solid #ff0000;
+        }
+        h1 { font-size: 1.8em; margin-bottom: 16px; }
+        .search-area {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        input[type="text"] {
+            padding: 10px 18px;
+            border-radius: 25px;
+            border: none;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 1em;
+            width: 280px;
+        }
+        input[type="text"]:focus { outline: 2px solid #ff0000; }
+        select {
+            padding: 10px 15px;
+            border-radius: 25px;
+            border: none;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 1em;
+        }
+        button {
+            padding: 10px 28px;
+            border-radius: 25px;
+            border: none;
+            background: #ff0000;
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover { background: #cc0000; }
+        .quick-tags {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+        .tag {
+            padding: 5px 14px;
+            border-radius: 15px;
+            background: #2a2a2a;
+            color: #ccc;
+            font-size: 0.85em;
+            cursor: pointer;
+            border: 1px solid #444;
+            transition: all 0.2s;
+        }
+        .tag:hover { background: #ff0000; color: #fff; border-color: #ff0000; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .stats { text-align: center; color: #888; margin: 18px 0 5px; font-size: 0.95em; }
+        .channels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .channel-card {
+            background: #1a1a1a;
+            border-radius: 14px;
+            padding: 20px;
+            border: 1px solid #2a2a2a;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .channel-card:hover { transform: translateY(-4px); border-color: #ff0000; }
+        .channel-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+        .rank-badge {
+            background: #333;
+            color: #fff;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9em;
+            flex-shrink: 0;
+        }
+        .rank-1 { background: #ffd700; color: #000; }
+        .rank-2 { background: #c0c0c0; color: #000; }
+        .rank-3 { background: #cd7f32; color: #fff; }
+        .channel-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        .channel-name { font-size: 1.05em; font-weight: bold; color: #fff; line-height: 1.3; }
+        .channel-handle { color: #888; font-size: 0.82em; margin-top: 2px; }
+        .channel-desc {
+            color: #bbb;
+            font-size: 0.84em;
+            line-height: 1.6;
+            margin-bottom: 14px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 40px;
+        }
+        .channel-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+        .stat-badge {
+            background: #222;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.78em;
+            color: #ccc;
+            border: 1px solid #333;
+        }
+        .stat-badge span { color: #ff6b6b; font-weight: bold; }
+        .channel-link {
+            display: block;
+            text-align: center;
+            margin-top: 14px;
+            padding: 9px;
+            background: #ff0000;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 22px;
+            font-size: 0.88em;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .channel-link:hover { background: #cc0000; }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 1.1em;
+            color: #888;
+        }
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top-color: #ff0000;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error {
+            text-align: center;
+            padding: 30px;
+            color: #ff6b6b;
+            background: #1a0000;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📚 教育系YouTubeチャンネル探索</h1>
+        <div class="search-area">
+            <input type="text" id="searchQuery" placeholder="キーワード（例：医学、英語、数学）" value="教育 学習">
+            <select id="sortOrder">
+                <option value="viewCount">再生数順</option>
+                <option value="relevance">関連度順</option>
+                <option value="rating">評価順</option>
+            </select>
+            <button onclick="searchChannels()">🔍 検索</button>
+        </div>
+        <div class="quick-tags">
+            <span class="tag" onclick="setSearch('医学 医療')">🏥 医学・医療</span>
+            <span class="tag" onclick="setSearch('看護 ナース')">👩‍⚕️ 看護</span>
+            <span class="tag" onclick="setSearch('英語 学習')">🌍 英語</span>
+            <span class="tag" onclick="setSearch('数学 解説')">📐 数学</span>
+            <span class="tag" onclick="setSearch('科学 理科')">🔬 科学</span>
+            <span class="tag" onclick="setSearch('歴史 解説')">📜 歴史</span>
+            <span class="tag" onclick="setSearch('プログラミング')">💻 プログラミング</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="stats" class="stats"></div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_KEY = 'AIzaSyDPY4LcnPCWvo7FMUNTliH1aukMQBcjFUQ';
+
+        function setSearch(query) {
+            document.getElementById('searchQuery').value = query;
+            searchChannels();
+        }
+
+        function formatNumber(n) {
+            if (!n) return '非公開';
+            n = parseInt(n);
+            if (n >= 100000000) return (n / 100000000).toFixed(1) + '億';
+            if (n >= 10000) return Math.floor(n / 10000) + '万';
+            if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+            return n.toString();
+        }
+
+        async function searchChannels() {
+            const query = document.getElementById('searchQuery').value || '教育';
+            const order = document.getElementById('sortOrder').value;
+            const resultsDiv = document.getElementById('results');
+            const statsDiv = document.getElementById('stats');
+
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><br>検索中...</div>';
+            statsDiv.innerHTML = '';
+
+            try {
+                const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&order=${order}&maxResults=20&relevanceLanguage=ja&regionCode=JP&key=${API_KEY}`;
+                const searchRes = await fetch(searchUrl);
+                const searchData = await searchRes.json();
+
+                if (searchData.error) {
+                    resultsDiv.innerHTML = `<div class="error">⚠️ エラー: ${searchData.error.message}</div>`;
+                    return;
+                }
+
+                if (!searchData.items || searchData.items.length === 0) {
+                    resultsDiv.innerHTML = '<div class="error">チャンネルが見つかりませんでした。</div>';
+                    return;
+                }
+
+                const channelIds = searchData.items.map(item => item.id.channelId).join(',');
+
+                const statsUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelIds}&key=${API_KEY}`;
+                const statsRes = await fetch(statsUrl);
+                const statsData = await statsRes.json();
+
+                const channels = (statsData.items || []).sort((a, b) => {
+                    return parseInt(b.statistics?.subscriberCount || 0) - parseInt(a.statistics?.subscriberCount || 0);
+                });
+
+                statsDiv.innerHTML = `「${query}」の検索結果：${channels.length}チャンネル（登録者数順）`;
+                resultsDiv.innerHTML = `<div class="channels-grid">${channels.map((ch, i) => renderChannel(ch, i)).join('')}</div>`;
+
+            } catch (e) {
+                resultsDiv.innerHTML = `<div class="error">⚠️ 通信エラーが発生しました。<br>${e.message}</div>`;
+            }
+        }
+
+        function renderChannel(ch, index) {
+            const rank = index + 1;
+            const rankClass = rank <= 3 ? `rank-${rank}` : '';
+            const thumb = ch.snippet?.thumbnails?.medium?.url || '';
+            const name = ch.snippet?.title || '';
+            const handle = ch.snippet?.customUrl || '';
+            const desc = (ch.snippet?.description || '説明なし').replace(/\n/g, ' ');
+            const subs = formatNumber(ch.statistics?.subscriberCount);
+            const views = formatNumber(ch.statistics?.viewCount);
+            const videos = ch.statistics?.videoCount ? parseInt(ch.statistics.videoCount).toLocaleString() : '?';
+            const channelUrl = `https://www.youtube.com/channel/${ch.id}`;
+
+            return `
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="rank-badge ${rankClass}">${rank}</div>
+                        <img class="channel-thumb" src="${thumb}" alt="${name}"
+                            onerror="this.style.background='#333';this.src=''">
+                        <div>
+                            <div class="channel-name">${name}</div>
+                            <div class="channel-handle">${handle}</div>
+                        </div>
+                    </div>
+                    <div class="channel-desc">${desc}</div>
+                    <div class="channel-stats">
+                        <div class="stat-badge">登録者 <span>${subs}</span></div>
+                        <div class="stat-badge">総再生 <span>${views}</span></div>
+                        <div class="stat-badge">動画数 <span>${videos}</span></div>
+                    </div>
+                    <a class="channel-link" href="${channelUrl}" target="_blank">YouTubeで見る →</a>
+                </div>
+            `;
+        }
+
+        window.onload = () => searchChannels();
+    </script>
+</body>
+</html>

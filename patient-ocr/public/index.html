@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>患者一覧 OCR</title>
+  <script src="https://unpkg.com/tesseract.js@2/dist/tesseract.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', 'Segoe UI', sans-serif;
+      background: #edf2f7;
+      color: #2d3748;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #2b6cb0, #2c5282);
+      color: white;
+      padding: 18px 28px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.03em; }
+    header p  { font-size: 0.82rem; opacity: 0.8; margin-top: 3px; }
+
+    .container {
+      max-width: 920px;
+      margin: 28px auto;
+      padding: 0 16px;
+    }
+
+    /* --- ドロップゾーン --- */
+    .drop-zone {
+      border: 2.5px dashed #90cdf4;
+      border-radius: 14px;
+      padding: 52px 24px;
+      text-align: center;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: #2b6cb0;
+      background: #ebf8ff;
+    }
+    .drop-zone .icon {
+      font-size: 3rem;
+      color: #90cdf4;
+      margin-bottom: 10px;
+    }
+    .drop-zone .main-text {
+      font-size: 1rem;
+      color: #4a5568;
+      margin-bottom: 14px;
+    }
+    .drop-zone .hint {
+      font-size: 0.78rem;
+      color: #a0aec0;
+      margin-top: 10px;
+    }
+    #file-input { display: none; }
+    .file-btn {
+      display: inline-block;
+      background: #2b6cb0;
+      color: white;
+      padding: 9px 22px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .file-btn:hover { background: #2c5282; }
+
+    /* --- ファイルタグ --- */
+    .file-list {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .file-tag {
+      background: #ebf8ff;
+      border: 1px solid #bee3f8;
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      color: #2c5282;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* --- アクションバー --- */
+    .action-bar {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: #38a169;
+      color: white;
+      border: none;
+      padding: 10px 26px;
+      border-radius: 7px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #2f855a; }
+    .btn-primary:disabled { background: #a0aec0; cursor: not-allowed; }
+    .btn-secondary {
+      background: white;
+      color: #4a5568;
+      border: 1.5px solid #cbd5e0;
+      padding: 9px 20px;
+      border-radius: 7px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: #f7fafc; border-color: #a0aec0; }
+    .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* --- エラー --- */
+    .error-msg {
+      background: #fff5f5;
+      border: 1.5px solid #feb2b2;
+      border-radius: 7px;
+      padding: 10px 14px;
+      color: #c53030;
+      font-size: 0.85rem;
+      margin-top: 10px;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    /* --- プログレス --- */
+    .progress-section {
+      margin-top: 18px;
+      background: white;
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: none;
+    }
+    .progress-section.visible { display: block; }
+    .progress-label {
+      font-size: 0.88rem;
+      color: #4a5568;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    .progress-bar-wrap {
+      background: #e2e8f0;
+      border-radius: 6px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #2b6cb0, #63b3ed);
+      border-radius: 6px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .progress-sub {
+      font-size: 0.78rem;
+      color: #a0aec0;
+      margin-top: 6px;
+    }
+
+    /* --- 結果 --- */
+    .result-section {
+      margin-top: 22px;
+      background: white;
+      border-radius: 10px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: none;
+    }
+    .result-section.visible { display: block; }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .result-header h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #2d3748;
+    }
+    .result-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .result-stats {
+      font-size: 0.82rem;
+      color: #718096;
+      margin-bottom: 14px;
+      padding: 6px 10px;
+      background: #f7fafc;
+      border-radius: 5px;
+      border-left: 3px solid #63b3ed;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead th {
+      background: #ebf8ff;
+      padding: 10px 16px;
+      text-align: left;
+      font-weight: 700;
+      color: #2c5282;
+      border-bottom: 2px solid #bee3f8;
+    }
+    tbody tr { transition: background 0.1s; }
+    tbody tr:hover { background: #f0f9ff; }
+    tbody tr:nth-child(even) { background: #f7fafc; }
+    tbody tr:nth-child(even):hover { background: #f0f9ff; }
+    tbody td {
+      padding: 9px 16px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #2d3748;
+    }
+    .td-id { font-family: 'Courier New', Courier, monospace; font-weight: 600; color: #2b6cb0; }
+
+    .empty-state {
+      text-align: center;
+      padding: 36px;
+      color: #a0aec0;
+      font-size: 0.9rem;
+    }
+
+    /* --- OCR生テキスト --- */
+    .raw-section {
+      margin-top: 16px;
+    }
+    .raw-toggle {
+      background: none;
+      border: none;
+      color: #718096;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+    }
+    .raw-toggle:hover { color: #4a5568; }
+    .raw-text {
+      margin-top: 8px;
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 0.78rem;
+      font-family: 'Courier New', Courier, monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      color: #4a5568;
+    }
+    .raw-text.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>患者一覧 OCR</h1>
+  <p>スクリーンショットから患者ID・氏名を自動抽出します（複数画像対応）</p>
+</header>
+
+<div class="container">
+
+  <!-- アップロードエリア -->
+  <div class="drop-zone" id="drop-zone">
+    <div class="icon">📂</div>
+    <p class="main-text">画像をここにドラッグ＆ドロップ</p>
+    <label class="file-btn" for="file-input">ファイルを選択</label>
+    <input type="file" id="file-input" multiple accept="image/*">
+    <p class="hint">複数ファイルを同時にアップロード可 (PNG / JPG / BMP 等)</p>
+  </div>
+
+  <div class="file-list" id="file-list"></div>
+  <div class="error-msg" id="error-msg"></div>
+
+  <div class="action-bar">
+    <button class="btn-primary" id="process-btn" disabled>▶ OCR 実行</button>
+    <button class="btn-secondary" id="clear-btn">クリア</button>
+  </div>
+
+  <!-- プログレス -->
+  <div class="progress-section" id="progress-section">
+    <div class="progress-label" id="progress-label">準備中...</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="progress-sub" id="progress-sub"></div>
+  </div>
+
+  <!-- 結果 -->
+  <div class="result-section" id="result-section">
+    <div class="result-header">
+      <h2>認識結果</h2>
+      <div class="result-actions">
+        <button class="btn-secondary" id="copy-btn">📋 コピー</button>
+        <button class="btn-secondary" id="csv-btn">⬇ CSV 保存</button>
+      </div>
+    </div>
+    <div class="result-stats" id="result-stats"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:35%">患者ID</th>
+          <th>患者氏名</th>
+        </tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+    </table>
+
+    <div class="raw-section">
+      <button class="raw-toggle" id="raw-toggle">▼ OCR 生テキストを表示</button>
+      <pre class="raw-text" id="raw-text"></pre>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ==================== 状態 ====================
+  let selectedFiles = [];
+  let patients = [];
+  let rawTexts = [];
+
+  // ==================== DOM ====================
+  const dropZone     = document.getElementById('drop-zone');
+  const fileInput    = document.getElementById('file-input');
+  const fileList     = document.getElementById('file-list');
+  const processBtn   = document.getElementById('process-btn');
+  const clearBtn     = document.getElementById('clear-btn');
+  const errorMsg     = document.getElementById('error-msg');
+  const progressSec  = document.getElementById('progress-section');
+  const progressLbl  = document.getElementById('progress-label');
+  const progressBar  = document.getElementById('progress-bar');
+  const progressSub  = document.getElementById('progress-sub');
+  const resultSec    = document.getElementById('result-section');
+  const resultStats  = document.getElementById('result-stats');
+  const resultBody   = document.getElementById('result-body');
+  const copyBtn      = document.getElementById('copy-btn');
+  const csvBtn       = document.getElementById('csv-btn');
+  const rawToggle    = document.getElementById('raw-toggle');
+  const rawText      = document.getElementById('raw-text');
+
+  // ==================== ドラッグ&ドロップ ====================
+  ['dragover', 'dragenter'].forEach(ev => {
+    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  });
+  ['dragleave', 'dragend'].forEach(ev => {
+    dropZone.addEventListener(ev, () => dropZone.classList.remove('drag-over'));
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    addFiles([...e.dataTransfer.files]);
+  });
+
+  fileInput.addEventListener('change', () => {
+    addFiles([...fileInput.files]);
+    fileInput.value = '';
+  });
+
+  function addFiles(newFiles) {
+    const images = newFiles.filter(f => f.type.startsWith('image/'));
+    for (const f of images) {
+      if (!selectedFiles.some(sf => sf.name === f.name && sf.size === f.size)) {
+        selectedFiles.push(f);
+      }
+    }
+    renderFileList();
+    processBtn.disabled = selectedFiles.length === 0;
+  }
+
+  function renderFileList() {
+    fileList.innerHTML = '';
+    selectedFiles.forEach(f => {
+      const el = document.createElement('div');
+      el.className = 'file-tag';
+      el.title = f.name;
+      el.textContent = f.name;
+      fileList.appendChild(el);
+    });
+  }
+
+  clearBtn.addEventListener('click', () => {
+    selectedFiles = [];
+    patients = [];
+    rawTexts = [];
+    renderFileList();
+    processBtn.disabled = true;
+    progressSec.classList.remove('visible');
+    resultSec.classList.remove('visible');
+    errorMsg.classList.remove('visible');
+  });
+
+  // ==================== OCR ====================
+  processBtn.addEventListener('click', runOCR);
+
+  async function runOCR() {
+    if (!selectedFiles.length) return;
+
+    processBtn.disabled = true;
+    errorMsg.classList.remove('visible');
+    progressSec.classList.add('visible');
+    resultSec.classList.remove('visible');
+    progressBar.style.width = '0%';
+    rawTexts = [];
+    patients = [];
+
+    let worker;
+    try {
+      progressLbl.textContent = '日本語モデルを読み込み中... (初回は数十秒かかります)';
+      progressSub.textContent = '';
+
+      // Tesseract.js v2 API: createWorker は同期的に作成し、load/loadLanguage/initialize が非同期
+      worker = Tesseract.createWorker({
+        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+        logger: m => {
+          if (m.status) progressSub.textContent = m.status;
+          if (typeof m.progress === 'number') {
+            const pct = Math.round(m.progress * 30); // 初期化フェーズは最大30%
+            progressBar.style.width = pct + '%';
+          }
+        }
+      });
+
+      progressLbl.textContent = 'エンジンを起動中...';
+      await worker.load();
+
+      progressLbl.textContent = '日本語データを読み込み中...';
+      await worker.loadLanguage('jpn+eng');
+
+      progressLbl.textContent = 'エンジンを初期化中...';
+      await worker.initialize('jpn+eng');
+
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const pct = 30 + Math.round((i / selectedFiles.length) * 65);
+        progressBar.style.width = pct + '%';
+        progressLbl.textContent = `認識中 (${i + 1} / ${selectedFiles.length}): ${file.name}`;
+        progressSub.textContent = '';
+
+        const { data } = await worker.recognize(file);
+        rawTexts.push({ name: file.name, text: data.text });
+        const extracted = extractPatients(data);
+        patients.push(...extracted);
+      }
+
+      progressBar.style.width = '95%';
+      progressLbl.textContent = '重複を除去しています...';
+      patients = dedup(patients);
+
+      progressBar.style.width = '100%';
+      progressLbl.textContent = `完了！ ${patients.length} 名の患者データを認識しました`;
+      progressSub.textContent = '';
+
+      renderResults();
+
+    } catch (err) {
+      console.error('OCRエラー:', err);
+      // err が Error 以外の型（文字列・プレーンオブジェクト）でもメッセージを取得
+      const detail = err == null ? '不明なエラー'
+        : typeof err === 'string' ? err
+        : (err.message || JSON.stringify(err));
+      showError('OCR処理中にエラーが発生しました: ' + detail);
+    } finally {
+      if (worker) await worker.terminate();
+      processBtn.disabled = false;
+    }
+  }
+
+  // ==================== 絵文字・特殊文字除去 ====================
+  // 日本語(ひらがな・カタカナ・漢字・全角)とASCII以外を空白に置換
+  function removeEmoji(text) {
+    return text
+      .replace(/[^ -~　-鿿＀-￯]/g, ' ')
+      .replace(/[ \t]+/g, ' ')
+      .trim();
+  }
+
+  // 漢字・ひらがな・カタカナのみで構成された単語（名前候補）
+  function isJapaneseNameWord(text) {
+    if (!text || text.length === 0) return false;
+    return /^[一-鿿㐀-䶿぀-ゟ゠-ヿーｦ-ﾟ・ー]+$/.test(text);
+  }
+
+  // ID候補（4文字以上の英数字）
+  function isIDWord(text) {
+    if (!text || text.length < 4) return false;
+    return /^\d+$/.test(text) || /^[A-Za-z0-9]+$/.test(text);
+  }
+
+  // 生年月日・年齢行を判定（スキップ対象）
+  function isDateOrAgeLine(text) {
+    if (/\d{4}[\/\-年]\d{1,2}[\/\-月]\d{1,2}/.test(text)) return true;
+    if (/^[\s\d年月日歳\/\-\.・\(\)]+$/.test(text)) return true;
+    if (/^\s*\d+\s*歳/.test(text)) return true;
+    return false;
+  }
+
+  // ==================== 解析ロジック ====================
+  function extractPatients(data) {
+    const results = [];
+
+    if (data.lines && data.lines.length) {
+      for (const line of data.lines) {
+        try {
+          const patient = parseLineByBbox(line);
+          if (patient) results.push(patient);
+        } catch (e) {
+          // 1行の失敗は無視して継続
+        }
+      }
+    }
+
+    // bbox解析で0件のときテキストフォールバック
+    if (results.length === 0 && data.text) {
+      return parseTextFallback(data.text);
+    }
+
+    return results;
+  }
+
+  function parseLineByBbox(line) {
+    if (!line.words || line.words.length < 1) return null;
+
+    // 絵文字除去しつつbbox情報を保持
+    const words = line.words
+      .map(w => ({
+        raw:  w.text || '',
+        text: removeEmoji(w.text || '').trim(),
+        x0:   (w.bbox && w.bbox.x0 != null) ? w.bbox.x0 : 0,
+        x1:   (w.bbox && w.bbox.x1 != null) ? w.bbox.x1 : 0,
+      }))
+      .filter(w => w.text.length > 0)
+      .sort((a, b) => a.x0 - b.x0);
+
+    if (words.length === 0) return null;
+
+    // 行全体テキストで生年月日・年齢行をスキップ
+    const lineText = words.map(w => w.text).join(' ');
+    if (isDateOrAgeLine(lineText)) return null;
+
+    // 先頭の行番号（純粋な1〜4桁数字）を除去
+    let startIdx = /^\d{1,4}$/.test(words[0].text) ? 1 : 0;
+    const usable = words.slice(startIdx);
+    if (usable.length === 0) return null;
+
+    // 単語を「日本語名前」と「ID候補」に分類
+    const nameWords = [];
+    const idWords   = [];
+    for (const w of usable) {
+      if (isJapaneseNameWord(w.text)) {
+        nameWords.push(w);
+      } else if (isIDWord(w.text)) {
+        idWords.push(w);
+      }
+      // 絵文字残骸・記号・生年月日構成要素は無視
+    }
+
+    if (nameWords.length === 0) return null;
+
+    const name = nameWords.map(w => w.text).join('');
+
+    // IDは名前の右端より右にあるものを優先
+    const nameRightEdge = Math.max(...nameWords.map(w => w.x1));
+    const rightIds = idWords.filter(w => w.x0 > nameRightEdge);
+
+    let id;
+    if (rightIds.length > 0) {
+      // 名前の右側で最も右にあるID
+      id = rightIds[rightIds.length - 1].text;
+    } else if (idWords.length > 0) {
+      // bbox座標が全部0などのとき、最後のID候補を使う
+      id = idWords[idWords.length - 1].text;
+    }
+
+    if (!name || !id) return null;
+    return { id, name };
+  }
+
+  // テキストベースのフォールバック解析（bbox失敗時）
+  function parseTextFallback(text) {
+    const results = [];
+    const lines = text.split('\n');
+
+    for (const rawLine of lines) {
+      const cleaned = removeEmoji(rawLine).trim();
+      if (!cleaned || cleaned.length < 2) continue;
+
+      // 生年月日・年齢行をスキップ
+      if (isDateOrAgeLine(cleaned)) continue;
+
+      // 先頭の行番号を除去
+      const withoutNum = cleaned.replace(/^\d{1,4}\s+/, '').trim();
+      if (!withoutNum) continue;
+
+      // 日本語名前部分（漢字/カタカナ/ひらがなの連続、2〜15文字）を全て収集
+      const nameTokens = withoutNum.match(
+        /[一-鿿㐀-䶿぀-ゟ゠-ヿーｦ-ﾟ・ー]{2,15}/g
+      );
+      if (!nameTokens) continue;
+
+      // 「年」「月」「日」「歳」だけのトークンを除外
+      const validNames = nameTokens.filter(m => !/^[年月日歳]+$/.test(m));
+      if (validNames.length === 0) continue;
+
+      const name = validNames.join('');
+
+      // ID候補をテキストから収集（4文字以上の英数字ブロック）
+      const idCandidates = withoutNum.match(/[A-Za-z0-9]{4,}/g) || [];
+
+      // 西暦4桁（1900〜2099）を除外してIDとみなすものを絞り込む
+      const validIds = idCandidates.filter(id => {
+        if (/^\d{4}$/.test(id)) {
+          const n = parseInt(id, 10);
+          return n < 1900 || n > 2099;
+        }
+        return true;
+      });
+
+      if (validIds.length === 0) continue;
+
+      // 名前より後ろに出現するIDを優先。なければ最後のID候補
+      const lastNamePos = withoutNum.lastIndexOf(validNames[validNames.length - 1]);
+      const afterName   = withoutNum.slice(lastNamePos + validNames[validNames.length - 1].length);
+      const afterIds    = afterName.match(/[A-Za-z0-9]{4,}/g);
+
+      const id = (afterIds && afterIds.length > 0)
+        ? afterIds[afterIds.length - 1]
+        : validIds[validIds.length - 1];
+
+      results.push({ id, name });
+    }
+
+    return results;
+  }
+
+  function dedup(list) {
+    const seenId   = new Set();
+    const seenName = new Set();
+    return list.filter(p => {
+      const idKey   = p.id.toLowerCase().trim();
+      const nameKey = p.name.trim();
+      if (!idKey || !nameKey) return false;
+      if (seenId.has(idKey) || seenName.has(nameKey)) return false;
+      seenId.add(idKey);
+      seenName.add(nameKey);
+      return true;
+    });
+  }
+
+  // ==================== 結果表示 ====================
+  function renderResults() {
+    resultBody.innerHTML = '';
+
+    if (!patients.length) {
+      resultBody.innerHTML =
+        '<tr><td colspan="2" class="empty-state">患者データを認識できませんでした。<br>画像の品質を確認するか、別のスクリーンショットを試してください。</td></tr>';
+    } else {
+      patients.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="td-id">${esc(p.id)}</td><td>${esc(p.name)}</td>`;
+        resultBody.appendChild(tr);
+      });
+    }
+
+    resultStats.textContent =
+      `認識患者数: ${patients.length} 名（重複除去済み） | 処理ファイル数: ${selectedFiles.length}`;
+
+    // 生テキストをセット
+    rawText.textContent = rawTexts
+      .map(r => `=== ${r.name} ===\n${r.text}`)
+      .join('\n\n');
+    rawText.classList.remove('visible');
+    rawToggle.textContent = '▼ OCR 生テキストを表示';
+
+    resultSec.classList.add('visible');
+  }
+
+  // ==================== エクスポート ====================
+  copyBtn.addEventListener('click', () => {
+    const text = ['患者ID\t患者氏名', ...patients.map(p => `${p.id}\t${p.name}`)].join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = copyBtn.textContent;
+      copyBtn.textContent = '✔ コピーしました';
+      setTimeout(() => (copyBtn.textContent = orig), 2000);
+    });
+  });
+
+  csvBtn.addEventListener('click', () => {
+    const BOM = '﻿';
+    const header = '患者ID,患者氏名\r\n';
+    const rows = patients.map(p => `${csvEsc(p.id)},${csvEsc(p.name)}`).join('\r\n');
+    const blob = new Blob([BOM + header + rows], { type: 'text/csv;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `patients_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  rawToggle.addEventListener('click', () => {
+    const isOpen = rawText.classList.toggle('visible');
+    rawToggle.textContent = isOpen ? '▲ OCR 生テキストを隠す' : '▼ OCR 生テキストを表示';
+  });
+
+  // ==================== ユーティリティ ====================
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function csvEsc(s) {
+    s = String(s);
+    return /[,"\r\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.add('visible');
+  }
+</script>
+</body>
+</html>
