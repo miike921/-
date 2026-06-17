@@ -512,9 +512,9 @@ input[type=number]{
   <div class="sep"></div>
   <span style="font-size:10px;color:#666">プリセット:</span>
   <button class="btn" onclick="preset(400,40)">軟部組織</button>
-  <button class="btn" onclick="preset(1500,300)">骨窓</button>
-  <button class="btn" onclick="preset(1500,-600)">肺窓</button>
-  <button class="btn" onclick="preset(80,40)">脳窓</button>
+  <button class="btn" onclick="preset(1500,300)">骨</button>
+  <button class="btn" onclick="preset(1500,-600)">肺</button>
+  <button class="btn" onclick="preset(80,40)">脳</button>
   <button class="btn" onclick="preset(350,40)">腹部</button>
   <div class="sep"></div>
   <span style="font-size:10px;color:#666">ズーム:</span>
