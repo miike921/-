@@ -635,7 +635,7 @@ input[type=number]{
       <div id="export-bar">
         <button class="btn primary" onclick="doExport()"
                 style="padding:7px 16px;font-size:12px">
-          📷 4枚を1枚の画像にまとめてダウンロード（電子カルテ用）
+          📷 4枚を1枚の画像にまとめる（デスクトップ保存＋電子カルテ貼り付け）
         </button>
         <small>パネルをダブルクリック → シングルビューで拡大表示</small>
       </div>
@@ -1006,7 +1006,7 @@ function refreshAllPanels(){for(let i=0;i<4;i++)refreshPanel(i);}
 // ══════════════════════════════════════════════
 async function doExport(){
   if(!pinned.some(p=>p)){
-    alert('比較パネルに画像がありません。\nシングルビューで「この画像を記録」ボタンを押してください。');
+    _toast('⚠️ 比較パネルに画像がありません。「記録」ボタンを押してください。');
     return;
   }
   const ww=+document.getElementById('ww').value;
@@ -1025,18 +1025,15 @@ async function doExport(){
       copied=true;
     }catch(_){}
 
-    // ファイルダウンロードも実行
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='CT比較4枚.png';
-    a.click();
-
     const msg=copied
-      ?'✅ クリップボードにコピー済み＋ファイルをダウンロードしました — 電子カルテに貼り付けできます'
-      :'📥 画像をダウンロードしました（CT比較4枚.png）';
+      ?'✅ クリップボードにコピー済み＋デスクトップに保存しました — 電子カルテに貼り付けできます'
+      :'📁 デスクトップに保存しました（CT比較4枚.png）';
     status(msg);
     _toast(msg);
-  }catch(e){alert('エラー: '+e.message);}
+  }catch(e){
+    status('⚠️ エラー: '+e.message);
+    _toast('⚠️ エラー: '+e.message);
+  }
   finally{hideLoad();}
 }
 
