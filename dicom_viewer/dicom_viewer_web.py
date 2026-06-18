@@ -9,6 +9,7 @@ DICOM CT ビューアー（Web版）
 import io
 import json
 import os
+import socketserver
 import subprocess
 import sys
 import threading
@@ -327,6 +328,13 @@ class Handler(BaseHTTPRequestHandler):
             pinned_list  = json.loads(pinned_json)
             try:
                 data = render_export_bytes(pinned_list, ww, wc)
+                # デスクトップにも自動保存
+                desktop = os.path.join(os.path.expanduser('~'), 'Desktop', 'CT比較4枚.png')
+                try:
+                    with open(desktop, 'wb') as f:
+                        f.write(data)
+                except Exception:
+                    pass
                 self._send(200, 'image/png', data,
                            extra=[('Content-Disposition',
                                    'attachment; filename="CT比較4枚.png"')])
@@ -1086,8 +1094,12 @@ window.addEventListener('resize',()=>{if(curUID)loadImg();});
 # 起動
 # ─────────────────────────────────────────────────────────────
 
+class ThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
+
 def main():
-    server = HTTPServer(('127.0.0.1', PORT), Handler)
+    server = ThreadingHTTPServer(('127.0.0.1', PORT), Handler)
     url    = f'http://127.0.0.1:{PORT}'
     print(f"DICOM CT ビューアー起動: {url}")
     print("ブラウザが自動的に開きます。  終了: Ctrl + C")
