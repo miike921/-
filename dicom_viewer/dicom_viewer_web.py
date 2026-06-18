@@ -67,6 +67,50 @@ def _apply_wl(arr, ww, wc):
 # フォルダスキャン
 # ─────────────────────────────────────────────────────────────
 
+# DICOMでないことが確実な拡張子（スキャンをスキップ）
+_SKIP_EXT = frozenset({
+    '.exe', '.dll', '.bat', '.cmd', '.msi', '.sys', '.com',
+    '.app', '.dmg', '.pkg', '.mpkg', '.dylib',
+    '.pdf', '.txt', '.rtf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+    '.html', '.htm', '.xml', '.css', '.js', '.json',
+    '.ico', '.bmp', '.jpg', '.jpeg', '.png', '.gif', '.svg',
+    '.ini', '.inf', '.cfg', '.log', '.nfo', '.lnk', '.url',
+    '.zip', '.tar', '.gz', '.rar', '.7z', '.cab',
+    '.db', '.sqlite', '.mdb', '.accdb',
+    '.mp4', '.avi', '.mov', '.wmv', '.mpg', '.mpeg',
+    '.mp3', '.wav', '.aac',
+    '.ttf', '.otf', '.woff', '.woff2',
+    '.py', '.java', '.class', '.jar', '.sh',
+})
+
+# スキップするフォルダ名（ビューワーソフト・説明書など）
+_SKIP_DIRS = frozenset({
+    'autorun', 'viewer', 'software', '__macosx', '.ds_store', 'dicomdir',
+    'windows', 'win', 'win32', 'win64', 'mac', 'linux', 'unix',
+    'program', 'programs', 'install', 'installer', 'setup',
+    'readme', 'manual', 'manuals', 'docs', 'document', 'documents', 'help',
+    'license', 'licences', 'licenses',
+})
+
+
+def _likely_dicom(path):
+    """拡張子とDICOMマジックバイトで高速判定"""
+    ext = os.path.splitext(path)[1].lower()
+    if ext in _SKIP_EXT:
+        return False
+    try:
+        with open(path, 'rb') as f:
+            f.seek(128)
+            if f.read(4) == b'DICM':
+                return True
+        # preambleなし旧形式DICOMは拡張子なし・.dcm・.ima に限定して試す
+        if ext in ('', '.dcm', '.ima', '.dicom'):
+            return True
+        return False
+    except Exception:
+        return False
+
+
 def scan_folder(folder):
     global SERIES, FILE_META
     SERIES    = {}
@@ -74,15 +118,16 @@ def scan_folder(folder):
     _IMG_CACHE.clear()
 
     series_dict = defaultdict(list)
-    skip = {'autorun', 'viewer', 'software', '__macosx', '.ds_store', 'dicomdir'}
 
     for root, dirs, files in os.walk(folder):
         dirs[:] = [d for d in dirs
-                   if d.lower() not in skip and not d.startswith('.')]
+                   if d.lower() not in _SKIP_DIRS and not d.startswith('.')]
         for fn in files:
             if fn.startswith('.'):
                 continue
             path = os.path.join(root, fn)
+            if not _likely_dicom(path):
+                continue
             try:
                 ds  = pydicom.dcmread(path, stop_before_pixels=True)
                 uid = str(ds.get('SeriesInstanceUID', ''))
@@ -566,13 +611,10 @@ input[type=number]{
                oninput="onSlider(+this.value)">
       </div>
       <div id="pin-bar">
-        <span>比較パネルに追加 →</span>
-        <button class="btn" onclick="pin(0)">パネル 1</button>
-        <button class="btn" onclick="pin(1)">パネル 2</button>
-        <button class="btn" onclick="pin(2)">パネル 3</button>
-        <button class="btn" onclick="pin(3)">パネル 4</button>
-        <span style="margin-left:6px;font-size:10px;color:#444">
-          見せたいスライスを最大4枚選択 → 「4枚比較」タブでエクスポート
+        <button id="pin-btn" class="btn primary" onclick="pinNext()">📌 この画像を記録（0 / 4）</button>
+        <button class="btn" onclick="clearAllPins()" style="margin-left:4px">クリア</button>
+        <span style="margin-left:10px;font-size:10px;color:#555">
+          見たいスライスで「記録」を押してください。4枚になったら自動でまとめ画像を作成します。
         </span>
       </div>
     </div>
@@ -623,7 +665,7 @@ let dragging=false,dragBtn=0,dsx=0,dsy=0,dpx=0,dpy=0,dww=400,dwc=40;
       </div>
       <div class="pw" id="pw${i}" ondblclick="focusPanel(${i})">
         <div class="placeholder" id="pp${i}">パネル ${i+1}<br>
-          <small style="color:#2a2a2a">シングルビューで「パネル ${i+1}」を押して追加</small>
+          <small style="color:#2a2a2a">シングルビューで「記録」を押して追加</small>
         </div>
       </div>
     </div>`;
@@ -692,6 +734,7 @@ function renderSidebar(){
 // ══════════════════════════════════════════════
 function selectSeries(uid){
   curUID=uid; curIdx=0;
+  _pc.clear();
   const s=series.find(x=>x.uid===uid);
   if(!s)return;
   curCount=s.count;
@@ -705,29 +748,40 @@ function selectSeries(uid){
 }
 
 // ══════════════════════════════════════════════
-// 画像描画
+// 画像描画（白フラッシュ防止 + プリフェッチ）
 // ══════════════════════════════════════════════
+const _pc=new Map();
 let _reqId=0;
+
 async function loadImg(){
   if(!curUID)return;
   const myId=++_reqId;
   const ww=+document.getElementById('ww').value;
   const wc=+document.getElementById('wc').value;
+
+  // キャッシュチェック → なければフェッチ（キャンバスはまだ触らない）
+  const cKey=`${curUID}:${curIdx}:${ww}:${wc}`;
+  let img=_pc.get(cKey);
+  if(!img||!img.complete||!img.naturalWidth){
+    img=new Image();
+    try{
+      await new Promise((ok,ng)=>{
+        img.onload=ok; img.onerror=ng;
+        img.src=`/api/image?uid=${encodeURIComponent(curUID)}&index=${curIdx}&ww=${ww}&wc=${wc}`;
+      });
+    }catch{ return; }
+    _pc.set(cKey,img);
+    if(_pc.size>12) _pc.delete(_pc.keys().next().value);
+  }
+  if(myId!==_reqId)return;
+
+  // 画像取得後にキャンバスを更新（白フラッシュ防止）
   const canvas=document.getElementById('viewer-canvas');
   const area=document.getElementById('viewer-area');
   const aw=area.clientWidth, ah=area.clientHeight;
-  canvas.width=aw; canvas.height=ah;
+  if(canvas.width!==aw) canvas.width=aw;
+  if(canvas.height!==ah) canvas.height=ah;
   const ctx=canvas.getContext('2d');
-
-  const url=`/api/image?uid=${encodeURIComponent(curUID)}&index=${curIdx}&ww=${ww}&wc=${wc}`;
-  const img=new Image();
-  try{
-    await new Promise((ok,ng)=>{img.onload=ok;img.onerror=ng;img.src=url});
-  }catch{
-    ctx.fillStyle='#f44';ctx.font='13px sans-serif';
-    ctx.fillText('画像読み込みエラー',10,30);return;
-  }
-  if(myId!==_reqId)return; // 古いリクエストは破棄
 
   const sw=img.naturalWidth*zoom, sh=img.naturalHeight*zoom;
   const dx=aw/2-sw/2+panX, dy=ah/2-sh/2+panY;
@@ -735,11 +789,24 @@ async function loadImg(){
   ctx.drawImage(img,dx,dy,sw,sh);
   _lastImg=img; _dx=dx; _dy=dy; _sw=sw; _sh=sh;
 
-  document.getElementById('slice-info').textContent=
-    `スライス: ${curIdx+1} / ${curCount}`;
+  document.getElementById('slice-info').textContent=`スライス: ${curIdx+1} / ${curCount}`;
   document.getElementById('zd').textContent=Math.round(zoom*100)+'%';
 
   loadOverlay(ww,wc);
+
+  // 前後スライスをプリフェッチ（次の切り替えを速く）
+  _prefetch(curIdx-1,ww,wc);
+  _prefetch(curIdx+1,ww,wc);
+}
+
+function _prefetch(idx,ww,wc){
+  if(!curUID||idx<0||idx>=curCount)return;
+  const k=`${curUID}:${idx}:${ww}:${wc}`;
+  if(_pc.has(k))return;
+  const i=new Image();
+  i.src=`/api/image?uid=${encodeURIComponent(curUID)}&index=${idx}&ww=${ww}&wc=${wc}`;
+  _pc.set(k,i);
+  if(_pc.size>12)_pc.delete(_pc.keys().next().value);
 }
 
 function loadOverlay(ww,wc){
@@ -828,9 +895,9 @@ function resetView(){zoom=1;panX=0;panY=0;document.getElementById('zd').textCont
 // ══════════════════════════════════════════════
 // プリセット
 // ══════════════════════════════════════════════
-function preset(ww,wc){document.getElementById('ww').value=ww;document.getElementById('wc').value=wc;loadImg();}
-document.getElementById('ww').addEventListener('change',loadImg);
-document.getElementById('wc').addEventListener('change',loadImg);
+function preset(ww,wc){_pc.clear();document.getElementById('ww').value=ww;document.getElementById('wc').value=wc;loadImg();}
+document.getElementById('ww').addEventListener('change',()=>{_pc.clear();loadImg();});
+document.getElementById('wc').addEventListener('change',()=>{_pc.clear();loadImg();});
 
 // ══════════════════════════════════════════════
 // タブ
@@ -843,14 +910,41 @@ function switchTab(t){
 }
 
 // ══════════════════════════════════════════════
-// 4パネル
+// 4パネル（1ボタン操作）
 // ══════════════════════════════════════════════
-function pin(i){
+function pinNext(){
   if(!curUID){alert('シリーズが選択されていません');return;}
-  pinned[i]={uid:curUID,index:curIdx};
-  refreshPanel(i);
-  switchTab('quad');
-  status(`パネル ${i+1} に追加しました`);
+  const filled=pinned.filter(p=>p).length;
+  if(filled>=4){
+    if(confirm('4枚すでに記録されています。\nリセットして最初からやり直しますか？')){
+      clearAllPins();
+    }
+    return;
+  }
+  const slot=pinned.findIndex(p=>!p);
+  pinned[slot]={uid:curUID,index:curIdx};
+  updatePinBtn();
+  const newFilled=pinned.filter(p=>p).length;
+  status(`${newFilled} / 4 枚を記録しました`);
+  if(newFilled===4){
+    refreshAllPanels();
+    switchTab('quad');
+    setTimeout(()=>doExport(),500);
+  }
+}
+
+function clearAllPins(){
+  pinned=[null,null,null,null];
+  for(let i=0;i<4;i++)clearPanel(i);
+  updatePinBtn();
+  status('比較記録をリセットしました');
+}
+
+function updatePinBtn(){
+  const btn=document.getElementById('pin-btn');
+  if(!btn)return;
+  const n=pinned.filter(p=>p).length;
+  btn.textContent=n<4?`📌 この画像を記録（${n} / 4）`:`✅ 4枚記録済み`;
 }
 
 function clearPanel(i){
@@ -859,7 +953,8 @@ function clearPanel(i){
   document.getElementById(`ph-label${i}`).textContent=`パネル ${i+1}（空）`;
   document.getElementById(`pw${i}`).innerHTML=
     `<div class="placeholder" id="pp${i}">パネル ${i+1}<br>
-      <small style="color:#2a2a2a">シングルビューで「パネル ${i+1}」を押して追加</small></div>`;
+      <small style="color:#2a2a2a">シングルビューで「記録」を押して追加</small></div>`;
+  updatePinBtn();
 }
 
 function focusPanel(i){
@@ -899,26 +994,54 @@ function refreshPanel(i){
 function refreshAllPanels(){for(let i=0;i<4;i++)refreshPanel(i);}
 
 // ══════════════════════════════════════════════
-// エクスポート
+// エクスポート（ダウンロード + クリップボードコピー）
 // ══════════════════════════════════════════════
 async function doExport(){
   if(!pinned.some(p=>p)){
-    alert('比較パネルに画像がありません。\nシングルビューで画像を選んで「パネル N」ボタンを押してください。');
+    alert('比較パネルに画像がありません。\nシングルビューで「この画像を記録」ボタンを押してください。');
     return;
   }
   const ww=+document.getElementById('ww').value;
   const wc=+document.getElementById('wc').value;
-  showLoad('高解像度画像を生成中...');
+  showLoad('4枚まとめ画像を生成中...');
   try{
     const params=new URLSearchParams({ww,wc,pinned:JSON.stringify(pinned)});
     const r=await fetch('/api/export?'+params);
     if(!r.ok)throw new Error(await r.text());
     const blob=await r.blob();
+
+    // クリップボードへのコピーを試みる（電子カルテへの貼り付け用）
+    let copied=false;
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      copied=true;
+    }catch(_){}
+
+    // ファイルダウンロードも実行
     const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);a.download='CT比較4枚.png';a.click();
-    status('エクスポート完了 — ファイルをダウンロードしました');
+    a.href=URL.createObjectURL(blob);
+    a.download='CT比較4枚.png';
+    a.click();
+
+    const msg=copied
+      ?'✅ クリップボードにコピー済み＋ファイルをダウンロードしました — 電子カルテに貼り付けできます'
+      :'📥 画像をダウンロードしました（CT比較4枚.png）';
+    status(msg);
+    _toast(msg);
   }catch(e){alert('エラー: '+e.message);}
   finally{hideLoad();}
+}
+
+function _toast(msg){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;bottom:40px;left:50%;transform:translateX(-50%);'
+    +'background:#1c1c1c;border:1px solid #0a84ff;color:#fff;'
+    +'padding:12px 28px;border-radius:8px;font-size:13px;z-index:500;'
+    +'box-shadow:0 4px 20px rgba(0,0,0,.7);white-space:nowrap;transition:opacity .5s';
+  d.textContent=msg;
+  document.body.appendChild(d);
+  setTimeout(()=>d.style.opacity='0',3500);
+  setTimeout(()=>d.remove(),4100);
 }
 
 // ══════════════════════════════════════════════
@@ -939,6 +1062,7 @@ function showShortcuts(){
       <tr><td style="color:#0a84ff;font-family:monospace">左ドラッグ</td><td style="color:#ccc">パン（画像移動）</td></tr>
       <tr><td style="color:#0a84ff;font-family:monospace">右ドラッグ 左右</td><td style="color:#ccc">Window Width（コントラスト）調整</td></tr>
       <tr><td style="color:#0a84ff;font-family:monospace">右ドラッグ 上下</td><td style="color:#ccc">Window Center（輝度）調整</td></tr>
+      <tr><td style="color:#0a84ff;font-family:monospace">📌 記録ボタン</td><td style="color:#ccc">現在の画像を比較に記録（4枚で自動エクスポート）</td></tr>
     </table>
     <p style="color:#555;font-size:11px;margin-top:16px">クリックで閉じる</p>
   </div></div>`;
