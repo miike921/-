@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CADD カセット計算</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #2b6cb0;
+      margin-bottom: 20px;
+      letter-spacing: 0.05em;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #2b6cb0;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #bee3f8;
+    }
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .field-row label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      min-width: 130px;
+      color: #4a5568;
+    }
+    .field-row input[type="number"] {
+      width: 110px;
+      padding: 8px 10px;
+      border: 2px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      text-align: right;
+      transition: border-color 0.2s;
+    }
+    .field-row input[type="number"]:focus { outline: none; border-color: #4299e1; }
+    .unit { font-size: 0.85rem; color: #718096; }
+    .cassette-select { display: flex; gap: 12px; }
+    .cassette-btn {
+      flex: 1; padding: 10px;
+      border: 2px solid #cbd5e0; border-radius: 8px;
+      background: #f7fafc; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .cassette-btn.active { border-color: #4299e1; background: #ebf8ff; color: #2b6cb0; }
+
+    .drug-table { width: 100%; border-collapse: collapse; }
+    .drug-table th {
+      background: #ebf8ff; padding: 8px 10px; font-size: 0.82rem;
+      color: #2b6cb0; text-align: center; border-bottom: 2px solid #bee3f8;
+    }
+    .drug-table td { padding: 8px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    .drug-table td:first-child { font-weight: 600; font-size: 0.9rem; padding-left: 10px; }
+    .drug-table td.spec { font-size: 0.75rem; color: #718096; text-align: center; }
+    .drug-table td.input-cell { text-align: center; }
+    .drug-table input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #4299e1; }
+    .drug-table input[type="number"].dose-input {
+      width: 90px; padding: 6px 8px; border: 2px solid #cbd5e0;
+      border-radius: 6px; font-size: 0.95rem; text-align: right;
+    }
+    .drug-table input[type="number"].dose-input:focus { outline: none; border-color: #4299e1; }
+    .drug-table input[type="number"].dose-input:disabled { background: #f7fafc; color: #a0aec0; border-color: #e2e8f0; }
+    .drug-unit { font-size: 0.8rem; color: #718096; margin-left: 3px; }
+
+    .calc-btn {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #4299e1, #2b6cb0);
+      color: white; border: none; border-radius: 10px;
+      font-size: 1.1rem; font-weight: 700; cursor: pointer;
+      letter-spacing: 0.05em;
+      box-shadow: 0 4px 12px rgba(66,153,225,0.4); transition: all 0.2s;
+    }
+    .calc-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(66,153,225,0.5); }
+    .calc-btn:active { transform: translateY(0); }
+
+    #result { display: none; }
+    .result-section { margin-bottom: 16px; }
+    .result-section h3 {
+      font-size: 0.95rem; font-weight: 700; color: #2d3748;
+      margin-bottom: 10px; padding-left: 8px; border-left: 4px solid #4299e1;
+    }
+
+    .recipe-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .recipe-table th { background: #2d3748; color: white; padding: 8px 12px; font-size: 0.85rem; text-align: center; }
+    .recipe-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; font-size: 0.9rem; }
+    .recipe-table td:first-child { text-align: left; font-weight: 600; }
+    .drug-highlight td { background: #ebf8ff !important; }
+    .saline-row td { background: #f0fff4 !important; color: #276749; font-weight: 600; }
+    .total-row td { background: #2d3748 !important; color: white !important; font-weight: 700; }
+
+    .dose-check-table { width: 100%; border-collapse: collapse; }
+    .dose-check-table th { background: #553c9a; color: white; padding: 8px 12px; font-size: 0.85rem; text-align: center; }
+    .dose-check-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; font-size: 0.9rem; }
+    .dose-check-table td:first-child { text-align: left; font-weight: 600; }
+    .dose-check-table tr:nth-child(even) td { background: #faf5ff; }
+    .ok-badge { color: #276749; font-weight: 700; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .info-box { background: #f7fafc; border-radius: 8px; padding: 12px; border: 1px solid #e2e8f0; }
+    .info-box .label { font-size: 0.78rem; color: #718096; margin-bottom: 4px; }
+    .info-box .value { font-size: 1.1rem; font-weight: 700; color: #2d3748; }
+
+    .bolus-table { width: 100%; border-collapse: collapse; }
+    .bolus-table th { background: #744210; color: white; padding: 8px 12px; font-size: 0.85rem; text-align: center; }
+    .bolus-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; font-size: 0.9rem; }
+    .bolus-table td:first-child { text-align: left; font-weight: 600; }
+    .bolus-table tr:nth-child(even) td { background: #fffbeb; }
+
+    .error-box {
+      background: #fff5f5; border: 2px solid #fc8181; border-radius: 8px;
+      padding: 14px; color: #c53030; font-weight: 600;
+      white-space: pre-line; text-align: center;
+    }
+    .cassette-bar-wrap { margin: 12px 0; }
+    .cassette-bar-label {
+      font-size: 0.8rem; color: #4a5568; margin-bottom: 4px;
+      display: flex; justify-content: space-between;
+    }
+    .cassette-bar {
+      height: 22px; background: #e2e8f0; border-radius: 11px;
+      overflow: hidden; display: flex;
+    }
+    .bar-segment {
+      height: 100%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; color: white;
+      overflow: hidden; white-space: nowrap;
+    }
+    @media (max-width: 480px) {
+      .info-grid { grid-template-columns: 1fr; }
+      .field-row { flex-wrap: wrap; }
+      .cassette-select { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>🏥 CADD カセット計算</h1>
+
+<div class="card">
+  <h2>基本設定</h2>
+  <div class="field-row">
+    <label>持続投与速度</label>
+    <input type="number" id="rate" value="0.1" min="0.1" step="0.1" style="width:100px">
+    <span class="unit">mL / 時</span>
+  </div>
+  <div class="field-row">
+    <label>ボーラスドーズ</label>
+    <input type="number" id="bolus" value="" min="0" step="0.1" placeholder="なし" style="width:100px">
+    <span class="unit">mL</span>
+  </div>
+  <div class="field-row" style="align-items:flex-start;">
+    <label style="padding-top:8px;">カセット容量</label>
+    <div class="cassette-select">
+      <button class="cassette-btn" id="btn100" onclick="selectCassette(100)">100 mL</button>
+      <button class="cassette-btn active" id="btn250" onclick="selectCassette(250)">250 mL</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>薬剤と目標1日投与量</h2>
+  <table class="drug-table">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding-left:10px;">薬剤名</th>
+        <th>規格</th>
+        <th>使用</th>
+        <th>目標 24h 量</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ナルベイン</td>
+        <td class="spec">2mL / A<br>20mg / A</td>
+        <td class="input-cell"><input type="checkbox" id="use_nalvein" onchange="toggleDrug('nalvein')"></td>
+        <td class="input-cell">
+          <input type="number" id="dose_nalvein" class="dose-input" min="0" step="0.1" disabled placeholder="—">
+          <span class="drug-unit">mg</span>
+        </td>
+      </tr>
+      <tr>
+        <td>トラマール</td>
+        <td class="spec">2mL / A<br>100mg / A</td>
+        <td class="input-cell"><input type="checkbox" id="use_tramal" onchange="toggleDrug('tramal')"></td>
+        <td class="input-cell">
+          <input type="number" id="dose_tramal" class="dose-input" min="0" step="1" disabled placeholder="—">
+          <span class="drug-unit">mg</span>
+        </td>
+      </tr>
+      <tr>
+        <td>フェンタニル</td>
+        <td class="spec">5mL / A<br>0.25mg / A</td>
+        <td class="input-cell"><input type="checkbox" id="use_fentanyl" onchange="toggleDrug('fentanyl')"></td>
+        <td class="input-cell">
+          <input type="number" id="dose_fentanyl" class="dose-input" min="0" step="0.01" disabled placeholder="—">
+          <span class="drug-unit">mg</span>
+        </td>
+      </tr>
+      <tr>
+        <td>モルヒネ塩酸塩</td>
+        <td class="spec">1mL / A<br>10mg / A</td>
+        <td class="input-cell"><input type="checkbox" id="use_morphine" onchange="toggleDrug('morphine')"></td>
+        <td class="input-cell">
+          <input type="number" id="dose_morphine" class="dose-input" min="0" step="1" disabled placeholder="—">
+          <span class="drug-unit">mg</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<button class="calc-btn" onclick="calculate()">計 算 す る</button>
+
+<div id="result" style="margin-top:20px;"></div>
+
+<script>
+  const DRUGS = {
+    nalvein:  { name: 'ナルベイン',     ampVol: 2, ampMg: 20,   color: '#4299e1' },
+    tramal:   { name: 'トラマール',     ampVol: 2, ampMg: 100,  color: '#9f7aea' },
+    fentanyl: { name: 'フェンタニル',   ampVol: 5, ampMg: 0.25, color: '#f6ad55' },
+    morphine: { name: 'モルヒネ塩酸塩', ampVol: 1, ampMg: 10,   color: '#fc8181' },
+  };
+
+  let cassetteVol = 250;
+
+  function selectCassette(vol) {
+    cassetteVol = vol;
+    document.getElementById('btn100').classList.toggle('active', vol === 100);
+    document.getElementById('btn250').classList.toggle('active', vol === 250);
+  }
+
+  function toggleDrug(key) {
+    const cb  = document.getElementById('use_' + key);
+    const inp = document.getElementById('dose_' + key);
+    inp.disabled = !cb.checked;
+    if (!cb.checked) inp.value = '';
+  }
+
+  function r(n, dec) { return Number(n.toFixed(dec)); }
+
+  // ──────────────────────────────────────────────────
+  //  核心計算
+  //  混合液総量 V を 0.1mL 刻みで探索し、cassetteVol 以下で最大の V を採用。
+  //  判定基準:
+  //    - トラマール以外: 実際の1日量が指示と完全一致（相対誤差 1e-9 未満）
+  //    - トラマール（他薬剤との混合時のみ）: アンプル数を整数に丸めた近似値でOK
+  //  ※浮動小数点誤差で「Nが整数か」を直接判定すると偽陽性が出るため、
+  //    常に「実際の投与量」で検証する。
+  // ──────────────────────────────────────────────────
+  function findBestV(drugs, vol24h, cassetteVol) {
+    // トラマールが他の薬剤と混合される場合のみ近似OK
+    const isTramalMixed = drugs.length > 1 && drugs.some(d => d.key === 'tramal');
+
+    let bestV = 0;
+
+    for (let v10 = 1; v10 <= Math.round(cassetteVol * 10); v10++) {
+      const V = v10 / 10;
+      let valid = true;
+      let totalDrugVol = 0;
+
+      for (const d of drugs) {
+        const N = Math.round(d.targetDose * V / (d.ampMg * vol24h));
+        if (N < 1) { valid = false; break; }
+        totalDrugVol += N * d.ampVol;
+
+        // トラマール混合時は近似OK（完全一致を要求しない）
+        if (!(isTramalMixed && d.key === 'tramal')) {
+          const actualDose = N * d.ampMg / V * vol24h;
+          const relErr = Math.abs(actualDose - d.targetDose) / d.targetDose;
+          if (relErr >= 1e-9) { valid = false; break; }
+        }
+      }
+
+      // 薬液合計がVを超えると生食が負になるため除外
+      if (valid && totalDrugVol > V + 0.001) valid = false;
+
+      if (valid) bestV = V;
+    }
+    return bestV;
+  }
+
+  function calculate() {
+    const rate     = parseFloat(document.getElementById('rate').value);
+    const bolusRaw = document.getElementById('bolus').value;
+    const bolus    = bolusRaw === '' ? null : parseFloat(bolusRaw);
+
+    const resultDiv = document.getElementById('result');
+    resultDiv.style.display = 'block';
+
+    if (!rate || rate <= 0) {
+      resultDiv.innerHTML = '<div class="error-box">持続投与速度を正しく入力してください。</div>';
+      return;
+    }
+
+    // 選択薬剤を収集
+    const selected = [];
+    for (const key of Object.keys(DRUGS)) {
+      if (!document.getElementById('use_' + key).checked) continue;
+      const dose = parseFloat(document.getElementById('dose_' + key).value);
+      if (!dose || dose <= 0) {
+        resultDiv.innerHTML = `<div class="error-box">${DRUGS[key].name} の目標1日量を入力してください。</div>`;
+        return;
+      }
+      selected.push({ ...DRUGS[key], key, targetDose: dose });
+    }
+
+    if (selected.length === 0) {
+      resultDiv.innerHTML = '<div class="error-box">薬剤を1つ以上選択してください。</div>';
+      return;
+    }
+
+    const vol24h = rate * 24; // 24時間投与量 (mL)
+
+    // 最適な混合液総量を探索
+    const bestV = findBestV(selected, vol24h, cassetteVol);
+
+    if (bestV === 0) {
+      // 最小解がカセット容量を超えている場合のフォールバック情報
+      const k = selected.map(d => d.targetDose / (d.ampMg * vol24h));
+      // 最小Vを概算（全薬剤のN_i=1となる最小V）
+      const minVapprox = Math.max(...selected.map((d, i) => 1 / k[i]));
+      resultDiv.innerHTML = `<div class="error-box">整数アンプル数で計算できる最小の混合液量（約 ${r(minVapprox,0)} mL〜）がカセット容量 ${cassetteVol} mL を超えています。\n速度を上げるか、目標1日量を見直してください。</div>`;
+      return;
+    }
+
+    // アンプル数・体積を確定
+    const isTramalMixed = selected.length > 1 && selected.some(d => d.key === 'tramal');
+    const k = selected.map(d => d.targetDose / (d.ampMg * vol24h));
+    const drugs = selected.map((d, i) => {
+      const amps    = Math.round(k[i] * bestV);
+      const drugVol = amps * d.ampVol;
+      const conc    = (amps * d.ampMg) / bestV;
+      const dose24h = conc * vol24h;
+      const isApprox = isTramalMixed && d.key === 'tramal';
+      return { ...d, amps, drugVol, conc, dose24h, isApprox };
+    });
+
+    const totalDrugVol = drugs.reduce((s, d) => s + d.drugVol, 0);
+    const salineVol    = bestV - totalDrugVol;
+
+    if (salineVol < -0.05) {
+      resultDiv.innerHTML = `<div class="error-box">薬液合計 ${r(totalDrugVol,1)} mL が混合液総量 ${r(bestV,1)} mL を超えています。</div>`;
+      return;
+    }
+
+    const cassetteDays = bestV / rate / 24;
+
+    // ── 結果 HTML ──
+    let html = '';
+
+    // 処方レシピ
+    html += `<div class="card result-section">
+      <h3>処方レシピ</h3>
+      <table class="recipe-table">
+        <thead><tr>
+          <th style="text-align:left;">薬剤</th>
+          <th>アンプル数</th>
+          <th>体積</th>
+        </tr></thead>
+        <tbody>`;
+    drugs.forEach(d => {
+      html += `<tr class="drug-highlight">
+        <td>${d.name}</td>
+        <td><strong>${d.amps} A</strong></td>
+        <td>${r(d.drugVol, 1)} mL</td>
+      </tr>`;
+    });
+    const salineDisp = Math.max(0, salineVol);
+    html += `<tr class="saline-row">
+        <td>生理食塩水</td><td>—</td><td>${r(salineDisp, 1)} mL</td>
+      </tr>
+      <tr class="total-row">
+        <td>合 計</td><td>—</td><td>${r(bestV, 1)} mL</td>
+      </tr>
+      </tbody></table>`;
+
+    // バーグラフ（カセット容量比）
+    html += `<div class="cassette-bar-wrap">
+      <div class="cassette-bar-label">
+        <span>カセット使用量</span>
+        <span>${r(bestV,1)} / ${cassetteVol} mL (${r(bestV/cassetteVol*100,0)}%)</span>
+      </div>
+      <div class="cassette-bar">`;
+    drugs.forEach(d => {
+      const pct = d.drugVol / cassetteVol * 100;
+      if (pct > 0.5) html += `<div class="bar-segment" style="width:${pct}%;background:${d.color};">${d.name.slice(0,4)}</div>`;
+    });
+    const salinePct = salineDisp / cassetteVol * 100;
+    if (salinePct > 0.5) html += `<div class="bar-segment" style="width:${salinePct}%;background:#68d391;">生食</div>`;
+    const emptyPct = (cassetteVol - bestV) / cassetteVol * 100;
+    if (emptyPct > 0.5) html += `<div class="bar-segment" style="width:${emptyPct}%;background:#cbd5e0;"></div>`;
+    html += `</div></div></div>`;
+
+    // 1日投与量確認
+    html += `<div class="card result-section">
+      <h3>1日投与量（確認）</h3>
+      <table class="dose-check-table">
+        <thead><tr>
+          <th style="text-align:left;">薬剤</th>
+          <th>濃度</th>
+          <th>指示 24h 量</th>
+          <th>実際 24h 量</th>
+        </tr></thead>
+        <tbody>`;
+    drugs.forEach(d => {
+      const concStr = d.conc < 0.1
+        ? r(d.conc, 5) + ' mg/mL'
+        : r(d.conc, 4) + ' mg/mL';
+      let actualCell;
+      if (d.isApprox) {
+        const diff = r(d.dose24h - d.targetDose, 2);
+        const diffStr = diff >= 0 ? `+${diff}` : `${diff}`;
+        actualCell = `<strong>${r(d.dose24h, 2)} mg</strong> <span style="color:#d97706;font-size:0.8rem;">≈（目標差 ${diffStr} mg）</span>`;
+      } else {
+        actualCell = `<strong>${r(d.dose24h, 4)} mg</strong> <span class="ok-badge">✓</span>`;
+      }
+      html += `<tr>
+        <td>${d.name}</td>
+        <td>${concStr}</td>
+        <td>${d.targetDose} mg</td>
+        <td>${actualCell}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+
+    // 基本情報
+    html += `<div class="card result-section">
+      <h3>基本情報</h3>
+      <div class="info-grid">
+        <div class="info-box">
+          <div class="label">持続投与速度</div>
+          <div class="value">${rate} mL / h</div>
+        </div>
+        <div class="info-box">
+          <div class="label">24時間投与量</div>
+          <div class="value">${r(vol24h,2)} mL / 日</div>
+        </div>
+        <div class="info-box">
+          <div class="label">混合液総量</div>
+          <div class="value">${r(bestV,1)} mL（カセット ${cassetteVol} mL）</div>
+        </div>
+        <div class="info-box">
+          <div class="label">カセット持続時間</div>
+          <div class="value">${r(cassetteDays,1)} 日間</div>
+        </div>
+      </div>
+    </div>`;
+
+    // ボーラス
+    if (bolus !== null && bolus > 0) {
+      html += `<div class="card result-section">
+        <h3>ボーラスドーズ（${bolus} mL / 回）</h3>
+        <table class="bolus-table">
+          <thead><tr>
+            <th style="text-align:left;">薬剤</th>
+            <th>1回投与量</th>
+          </tr></thead>
+          <tbody>`;
+      drugs.forEach(d => {
+        const amt = d.conc * bolus;
+        const disp = amt < 0.01 ? r(amt, 5) : r(amt, 3);
+        html += `<tr><td>${d.name}</td><td><strong>${disp} mg</strong></td></tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+
+    resultDiv.innerHTML = html;
+    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+</body>
+</html>
