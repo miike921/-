@@ -7,6 +7,12 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
     background: #0f172a;
@@ -15,7 +21,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 24px 16px;
+    padding: 16px 12px;
   }
 
   h1 {
@@ -29,10 +35,10 @@
   .card {
     background: #1e293b;
     border-radius: 16px;
-    padding: 24px;
+    padding: 16px;
     width: 100%;
     max-width: 420px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     border: 1px solid #334155;
   }
 
@@ -77,26 +83,27 @@
   .input-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 10px;
   }
 
   .input-row:last-child { margin-bottom: 0; }
 
   .input-label {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: #94a3b8;
     white-space: nowrap;
-    min-width: 60px;
+    min-width: 36px;
   }
 
   .input-field {
     flex: 1;
+    min-width: 0;
     background: #0f172a;
     border: 1px solid #334155;
     border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 1.1rem;
+    padding: 8px 8px;
+    font-size: 1rem;
     color: #e2e8f0;
     text-align: right;
     outline: none;
@@ -110,16 +117,16 @@
   .input-field:focus { border-color: #0ea5e9; }
 
   .input-unit {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #64748b;
-    min-width: 28px;
+    min-width: 22px;
   }
 
   /* 計算ボタン */
   .calc-btn {
     width: 100%;
     max-width: 420px;
-    padding: 14px;
+    padding: 14px 12px;
     background: #0ea5e9;
     border: none;
     border-radius: 12px;
@@ -139,7 +146,7 @@
   .result-card {
     background: #1e293b;
     border-radius: 16px;
-    padding: 24px;
+    padding: 16px;
     width: 100%;
     max-width: 420px;
     border: 1px solid #334155;
@@ -173,7 +180,7 @@
   .metro-card {
     background: #1e293b;
     border-radius: 16px;
-    padding: 24px;
+    padding: 16px;
     width: 100%;
     max-width: 420px;
     border: 1px solid #334155;
