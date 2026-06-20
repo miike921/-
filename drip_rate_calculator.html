@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>点滴速度計算</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #7dd3fc;
+    margin-bottom: 24px;
+    letter-spacing: 0.05em;
+  }
+
+  .card {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    margin-bottom: 16px;
+    border: 1px solid #334155;
+  }
+
+  .section-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* 輸液セット選択 */
+  .toggle-group {
+    display: flex;
+    background: #0f172a;
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 7px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    color: #64748b;
+  }
+
+  .toggle-btn.active {
+    background: #0ea5e9;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(14,165,233,0.4);
+  }
+
+  /* 入力フィールド */
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .input-row:last-child { margin-bottom: 0; }
+
+  .input-label {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    min-width: 60px;
+  }
+
+  .input-field {
+    flex: 1;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 1.1rem;
+    color: #e2e8f0;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  .input-field::-webkit-outer-spin-button,
+  .input-field::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .input-field:focus { border-color: #0ea5e9; }
+
+  .input-unit {
+    font-size: 0.85rem;
+    color: #64748b;
+    min-width: 28px;
+  }
+
+  /* 計算ボタン */
+  .calc-btn {
+    width: 100%;
+    max-width: 420px;
+    padding: 14px;
+    background: #0ea5e9;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background 0.2s, transform 0.1s;
+    margin-bottom: 16px;
+  }
+
+  .calc-btn:hover { background: #0284c7; }
+  .calc-btn:active { transform: scale(0.98); }
+
+  /* 結果表示 */
+  .result-card {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid #334155;
+    text-align: center;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .result-card.visible { display: block; }
+
+  .result-value {
+    font-size: 4rem;
+    font-weight: 800;
+    color: #7dd3fc;
+    line-height: 1;
+  }
+
+  .result-unit {
+    font-size: 1rem;
+    color: #94a3b8;
+    margin-top: 4px;
+    margin-bottom: 16px;
+  }
+
+  .result-sub {
+    font-size: 0.85rem;
+    color: #64748b;
+  }
+
+  /* メトロノーム */
+  .metro-card {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid #334155;
+    text-align: center;
+    display: none;
+  }
+
+  .metro-card.visible { display: block; }
+
+  /* ドロップインジケーター */
+  .drop-indicator {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: #1e3a5f;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    transition: background 0.06s, box-shadow 0.06s;
+    border: 3px solid #1e3a5f;
+  }
+
+  .drop-indicator.flash {
+    background: #0ea5e9;
+    box-shadow: 0 0 40px rgba(14,165,233,0.8), 0 0 80px rgba(14,165,233,0.4);
+    border-color: #7dd3fc;
+  }
+
+  .metro-controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .start-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .start-btn.play {
+    background: #22c55e;
+    color: #fff;
+  }
+
+  .start-btn.play:hover { background: #16a34a; }
+
+  .start-btn.stop {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  .start-btn.stop:hover { background: #dc2626; }
+
+  /* 音量スライダー */
+  .volume-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .volume-row span {
+    font-size: 0.8rem;
+    color: #64748b;
+    min-width: 40px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    accent-color: #0ea5e9;
+  }
+
+  .counter-display {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-top: 12px;
+  }
+
+  .counter-display span {
+    font-weight: 700;
+    color: #7dd3fc;
+    font-size: 1.1rem;
+  }
+</style>
+</head>
+<body>
+
+<p style="font-size:1.1rem;font-weight:700;color:#94a3b8;letter-spacing:0.1em;margin-bottom:8px;">みんなの在宅診療所</p>
+<h1>💧 点滴速度計算</h1>
+
+<!-- 輸液セット -->
+<div class="card">
+  <div class="section-label">輸液セット</div>
+  <div class="toggle-group">
+    <button class="toggle-btn active" id="btn20" onclick="selectSet(20)">20滴 / mL<br><small style="font-weight:400;font-size:0.75rem">一般用（標準）</small></button>
+    <button class="toggle-btn" id="btn60" onclick="selectSet(60)">60滴 / mL<br><small style="font-weight:400;font-size:0.75rem">微量用</small></button>
+  </div>
+</div>
+
+<!-- 輸液量 -->
+<div class="card">
+  <div class="section-label">輸液量</div>
+  <div class="input-row">
+    <span class="input-label">輸液量</span>
+    <input class="input-field" type="number" id="volume" min="1" placeholder="500">
+    <span class="input-unit">mL</span>
+  </div>
+</div>
+
+<!-- 投与時間 -->
+<div class="card">
+  <div class="section-label">投与時間</div>
+  <div class="input-row">
+    <span class="input-label">時間</span>
+    <input class="input-field" type="number" id="hours" min="0" placeholder="6">
+    <span class="input-unit">時間</span>
+  </div>
+  <div class="input-row">
+    <span class="input-label">分</span>
+    <input class="input-field" type="number" id="minutes" min="0" max="59" placeholder="0">
+    <span class="input-unit">分</span>
+  </div>
+</div>
+
+<button class="calc-btn" onclick="calculate()">計算する</button>
+
+<!-- 結果 -->
+<div class="result-card" id="resultCard">
+  <div class="section-label">滴下速度</div>
+  <div class="result-value" id="resultValue">--</div>
+  <div class="result-unit">滴 / 分</div>
+  <div class="result-sub" id="resultSub"></div>
+</div>
+
+<!-- メトロノーム -->
+<div class="metro-card" id="metroCard">
+  <div class="section-label">ガイド音・光</div>
+  <div class="drop-indicator" id="dropIndicator">💧</div>
+  <div class="metro-controls">
+    <button class="start-btn play" id="startBtn" onclick="startMetro()">▶ 開始</button>
+    <button class="start-btn stop" id="stopBtn" onclick="stopMetro()" style="display:none">■ 停止</button>
+  </div>
+  <div class="volume-row">
+    <span>音量</span>
+    <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5">
+    <span id="volLabel">50%</span>
+  </div>
+  <div class="counter-display">経過滴数：<span id="dropCount">0</span> 滴</div>
+</div>
+
+<script>
+  let dropsPerMl = 20;
+  let dropsPerMin = 0;
+  let intervalMs = 0;
+  let metroTimer = null;
+  let audioCtx = null;
+  let dropCount = 0;
+
+  document.getElementById('volume-slider').addEventListener('input', function() {
+    document.getElementById('volLabel').textContent = Math.round(this.value * 100) + '%';
+  });
+
+  function selectSet(val) {
+    dropsPerMl = val;
+    document.getElementById('btn20').classList.toggle('active', val === 20);
+    document.getElementById('btn60').classList.toggle('active', val === 60);
+    if (dropsPerMin > 0) calculate();
+  }
+
+  function calculate() {
+    const vol = parseFloat(document.getElementById('volume').value);
+    const hrs = parseFloat(document.getElementById('hours').value) || 0;
+    const mins = parseFloat(document.getElementById('minutes').value) || 0;
+    const totalMin = hrs * 60 + mins;
+
+    if (!vol || vol <= 0) { alert('輸液量を入力してください'); return; }
+    if (totalMin <= 0) { alert('投与時間を入力してください'); return; }
+
+    dropsPerMin = (vol * dropsPerMl) / totalMin;
+    const rounded = Math.round(dropsPerMin * 10) / 10;
+    intervalMs = (60 / dropsPerMin) * 1000;
+
+    const secInterval = (intervalMs / 1000).toFixed(1);
+
+    document.getElementById('resultValue').textContent = rounded.toFixed(1);
+    document.getElementById('resultSub').textContent =
+      `1滴ごとの間隔：約 ${secInterval} 秒　／　${dropsPerMl}滴/mL セット`;
+
+    document.getElementById('resultCard').classList.add('visible');
+    document.getElementById('metroCard').classList.add('visible');
+
+    if (metroTimer) stopMetro();
+  }
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function beep() {
+    try {
+      const ctx = getAudioCtx();
+      const vol = parseFloat(document.getElementById('volume-slider').value);
+      [523.25, 1046.5, 1568].forEach((freq, i) => {
+        const levels = [0.4, 0.2, 0.1];
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(vol * levels[i], ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+        g.connect(ctx.destination);
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, ctx.currentTime);
+        o.connect(g);
+        o.start(ctx.currentTime);
+        o.stop(ctx.currentTime + 0.8);
+      });
+    } catch(e) {}
+  }
+
+  function flash() {
+    const el = document.getElementById('dropIndicator');
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 120);
+  }
+
+  function tick() {
+    beep();
+    flash();
+    dropCount++;
+    document.getElementById('dropCount').textContent = dropCount;
+  }
+
+  function startMetro() {
+    if (!dropsPerMin) { alert('先に計算してください'); return; }
+    stopMetro();
+    dropCount = 0;
+    document.getElementById('dropCount').textContent = 0;
+
+    tick();
+    metroTimer = setInterval(tick, intervalMs);
+
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'block';
+  }
+
+  function stopMetro() {
+    if (metroTimer) { clearInterval(metroTimer); metroTimer = null; }
+    document.getElementById('startBtn').style.display = 'block';
+    document.getElementById('stopBtn').style.display = 'none';
+  }
+
+  // Enterキーで計算
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+</script>
+</body>
+</html>

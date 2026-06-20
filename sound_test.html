@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>音の試聴</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+  h1 { font-size: 1.3rem; color: #7dd3fc; margin-bottom: 8px; }
+  .sub { font-size: 0.85rem; color: #64748b; margin-bottom: 32px; }
+
+  .sound-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .sound-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .sound-info { flex: 1; }
+  .sound-name { font-size: 1rem; font-weight: 700; margin-bottom: 3px; }
+  .sound-desc { font-size: 0.78rem; color: #64748b; }
+
+  .play-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: #0ea5e9;
+    color: #fff;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .play-btn:hover { background: #0284c7; }
+  .play-btn:active { transform: scale(0.95); background: #0369a1; }
+  .play-btn.playing { background: #22c55e; }
+</style>
+</head>
+<body>
+<h1>🔊 音の試聴</h1>
+<p class="sub">各ボタンを押して音を確認してください</p>
+
+<div class="sound-list">
+
+  <div class="sound-card">
+    <div class="sound-info">
+      <div class="sound-name">① 現在の音（サイン波ビープ）</div>
+      <div class="sound-desc">880Hz→660Hz 下降する電子音・柔らかめ</div>
+    </div>
+    <button class="play-btn" onclick="playCurrent(this)">▶ 試聴</button>
+  </div>
+
+  <div class="sound-card">
+    <div class="sound-info">
+      <div class="sound-name">② クリック</div>
+      <div class="sound-desc">ノイズバースト・カチッと鋭い音</div>
+    </div>
+    <button class="play-btn" onclick="playClick(this)">▶ 試聴</button>
+  </div>
+
+  <div class="sound-card">
+    <div class="sound-info">
+      <div class="sound-name">③ 水滴音（ポン）</div>
+      <div class="sound-desc">低周波サイン波・滴下のイメージに近い</div>
+    </div>
+    <button class="play-btn" onclick="playDrop(this)">▶ 試聴</button>
+  </div>
+
+  <div class="sound-card">
+    <div class="sound-info">
+      <div class="sound-name">④ 低音トーン（ドン）</div>
+      <div class="sound-desc">80Hz重低音・耳に優しく長時間使用向き</div>
+    </div>
+    <button class="play-btn" onclick="playBass(this)">▶ 試聴</button>
+  </div>
+
+  <div class="sound-card">
+    <div class="sound-info">
+      <div class="sound-name">⑤ 二重ビープ（ピピッ）</div>
+      <div class="sound-desc">短音×2連続・リズムが取りやすい</div>
+    </div>
+    <button class="play-btn" onclick="playDouble(this)">▶ 試聴</button>
+  </div>
+
+  <div class="sound-card">
+    <div class="sound-info">
+      <div class="sound-name">⑥ チャイム（ベル）</div>
+      <div class="sound-desc">倍音あり余韻長め・柔らかく上品</div>
+    </div>
+    <button class="play-btn" onclick="playChime(this)">▶ 試聴</button>
+  </div>
+
+</div>
+
+<script>
+  let ctx = null;
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return ctx;
+  }
+
+  function flash(btn) {
+    btn.classList.add('playing');
+    setTimeout(() => btn.classList.remove('playing'), 300);
+  }
+
+  // ① 現在の音
+  function playCurrent(btn) {
+    flash(btn);
+    const c = getCtx();
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.5, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.15);
+    g.connect(c.destination);
+    const o = c.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(880, c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(660, c.currentTime + 0.15);
+    o.connect(g);
+    o.start(); o.stop(c.currentTime + 0.15);
+  }
+
+  // ② クリック
+  function playClick(btn) {
+    flash(btn);
+    const c = getCtx();
+    const len = c.sampleRate * 0.04;
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 8);
+    }
+    const g = c.createGain();
+    g.gain.setValueAtTime(1.0, c.currentTime);
+    g.connect(c.destination);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(g);
+    src.start();
+  }
+
+  // ③ 水滴音
+  function playDrop(btn) {
+    flash(btn);
+    const c = getCtx();
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.6, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.35);
+    g.connect(c.destination);
+    const o = c.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(800, c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(200, c.currentTime + 0.35);
+    o.connect(g);
+    o.start(); o.stop(c.currentTime + 0.35);
+  }
+
+  // ④ 低音トーン
+  function playBass(btn) {
+    flash(btn);
+    const c = getCtx();
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0, c.currentTime);
+    g.gain.linearRampToValueAtTime(0.7, c.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.3);
+    g.connect(c.destination);
+    const o = c.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(80, c.currentTime);
+    o.connect(g);
+    o.start(); o.stop(c.currentTime + 0.3);
+  }
+
+  // ⑤ 二重ビープ
+  function playDouble(btn) {
+    flash(btn);
+    const c = getCtx();
+    [0, 0.12].forEach(delay => {
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.4, c.currentTime + delay);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + delay + 0.09);
+      g.connect(c.destination);
+      const o = c.createOscillator();
+      o.type = 'square';
+      o.frequency.setValueAtTime(1000, c.currentTime + delay);
+      o.connect(g);
+      o.start(c.currentTime + delay);
+      o.stop(c.currentTime + delay + 0.09);
+    });
+  }
+
+  // ⑥ チャイム
+  function playChime(btn) {
+    flash(btn);
+    const c = getCtx();
+    [523.25, 1046.5, 1568].forEach((freq, i) => {
+      const g = c.createGain();
+      const vol = [0.4, 0.2, 0.1][i];
+      g.gain.setValueAtTime(vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.8);
+      g.connect(c.destination);
+      const o = c.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, c.currentTime);
+      o.connect(g);
+      o.start(); o.stop(c.currentTime + 0.8);
+    });
+  }
+</script>
+</body>
+</html>
