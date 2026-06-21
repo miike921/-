@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Android
+.gradle/
+build/
+*.apk
+*.aab
+local.properties
+.idea/
+
+# iOS
+xcuserdata/
+*.xcworkspace/xcuserdata
+DerivedData/
+*.ipa
+
+# Node.js
+node_modules/

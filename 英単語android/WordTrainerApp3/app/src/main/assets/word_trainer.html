@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Word Trainer Part 3 (601-900語)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .logo-font { font-family: 'Comfortaa', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .speech-active-section { border-color: #4f46e5 !important; background-color: rgba(79, 70, 229, 0.05) !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08); transform: scale(1.01); }
+        button, select { min-height: 46px; }
+        #start-overlay { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.5rem; padding: 2rem; }
+        #start-btn { background: white; color: #d97706; font-weight: 700; font-size: 1.15rem; padding: 1.1rem 3rem; border-radius: 1rem; box-shadow: 0 8px 32px rgba(0,0,0,0.25); border: none; cursor: pointer; min-height: 60px; transition: transform 0.1s; }
+        #start-btn:active { transform: scale(0.96); }
+    </style>
+</head>
+<body class="min-height-screen flex flex-col justify-between text-slate-800">
+    <div id="start-overlay">
+        <div style="text-align:center;">
+            <div style="width:88px;height:88px;background:rgba(255,255,255,0.2);border-radius:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><i class="fa-solid fa-book-open" style="font-size:2.5rem;color:white;"></i></div>
+            <h1 class="logo-font" style="font-size:2rem;font-weight:700;color:white;margin-bottom:0.3rem;">Word Trainer</h1>
+            <p style="color:rgba(253,230,138,1);font-size:0.9rem;">Part 3: 共通テスト必須 No.7〜9</p>
+        </div>
+        <button id="start-btn" onclick="startApp()"><i class="fa-solid fa-play" style="margin-right:0.6rem;"></i>タップして開始</button>
+    </div>
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col lg:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-600 text-white p-2 rounded-xl shadow-md"><i class="fa-solid fa-book-open text-xl"></i></div>
+                <div><h1 class="text-lg font-bold text-slate-900 logo-font">Gemini Word Trainer</h1><p class="text-[10px] text-slate-500 font-semibold">Part 3 (No.7〜9 収録)</p></div>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-full lg:w-auto">
+                <span class="text-xs font-bold text-slate-500 px-2 hidden sm:inline">教材:</span>
+                <select id="select-pack" onchange="changeLearningPack()" class="bg-white border-0 text-slate-800 font-bold text-sm py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm w-full lg:w-auto">
+                    <option value="pack7" selected>No.7 感情・心理・人間関係</option>
+                    <option value="pack8">No.8 学問・歴史・文化芸術</option>
+                    <option value="pack9">No.9 メディア・通信・IT社会</option>
+                </select>
+            </div>
+            <div class="flex gap-2 w-full lg:w-auto justify-end">
+                <button onclick="switchTab('player')" id="tab-btn-player" class="tab-btn flex-1 lg:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition bg-amber-50 text-amber-700"><i class="fa-solid fa-play mr-1.5"></i>プレーヤー</button>
+                <button onclick="switchTab('list')" id="tab-btn-list" class="tab-btn flex-1 lg:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-list mr-1.5"></i>一覧 (<span class="total-count-badge">0</span>)</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl w-full mx-auto p-4 flex flex-col justify-center">
+        <!-- プレーヤータブ -->
+        <div id="tab-player" class="tab-content block space-y-6">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex flex-col sm:flex-row justify-between gap-3 pb-2 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <div class="inline-flex rounded-lg p-1 bg-slate-100">
+                            <button id="mode-all-btn" onclick="setPlaybackMode('all')" class="px-3 py-1 rounded-md text-xs font-semibold bg-white text-amber-600 shadow-sm">全単語 (<span id="count-all-words">0</span>)</button>
+                            <button id="mode-unclear-btn" onclick="setPlaybackMode('unclear')" class="px-3 py-1 rounded-md text-xs font-semibold text-slate-600">わからない (<span id="count-unclear-words">0</span>)</button>
+                        </div>
+                    </div>
+                    <span id="progress-text" class="text-sm font-bold text-slate-700">0 / 0</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden"><div id="progress-bar" class="bg-amber-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+            </div>
+
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-md p-6 sm:p-10 relative overflow-hidden min-h-[440px] flex flex-col justify-between">
+                <div class="absolute top-4 right-4 z-20">
+                    <button id="card-unclear-toggle" onclick="toggleCurrentUnclear()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-400 font-semibold text-xs shadow-sm"><i class="fa-regular fa-star text-sm" id="card-unclear-icon"></i><span id="card-unclear-text">わからない</span></button>
+                </div>
+                <div class="space-y-3.5 z-10 mt-6" id="card-content-area">
+                    <div id="section-word" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50"><div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2.5 py-0.5 rounded-full">Step 1: Word</span><button onclick="speakCurrentPart('word')" class="text-indigo-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div><h2 id="card-word" class="text-3xl sm:text-4xl font-extrabold text-slate-950">Loading...</h2></div>
+                    <div id="section-meaning" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50"><div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2.5 py-0.5 rounded-full">Step 2: Meaning</span><button onclick="speakCurrentPart('meaning')" class="text-rose-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div><p id="card-meaning" class="text-lg sm:text-xl font-bold text-slate-850">—</p></div>
+                    <div id="section-sentence" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50"><div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-teal-500 bg-teal-50 px-2.5 py-0.5 rounded-full">Step 3: Example</span><button onclick="speakCurrentPart('sentence')" class="text-teal-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div><p id="card-sentence" class="text-base sm:text-lg font-medium text-slate-700 italic">—</p></div>
+                    <div id="section-translation" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50"><div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-2.5 py-0.5 rounded-full">Step 4: Translation</span><button onclick="speakCurrentPart('translation')" class="text-amber-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div><p id="card-translation" class="text-sm sm:text-base font-normal text-slate-600">—</p></div>
+                </div>
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 pt-6 border-t border-slate-100 z-10">
+                    <div class="flex items-center gap-3">
+                        <button id="btn-autoplay" onclick="toggleAutoPlay()" class="px-4 py-1.5 rounded-xl text-sm font-semibold border border-amber-200 bg-amber-50 text-amber-800 shadow-sm flex items-center gap-2"><span class="relative flex h-3.5 w-3.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" id="ping-indicator"></span><span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500" id="status-dot"></span></span><span id="text-autoplay">自動再生 ON</span></button>
+                        <select id="select-interval" onchange="changeInterval()" class="bg-transparent border-b border-slate-300 text-slate-600 text-xs py-0.5"><option value="1500" selected>短め</option><option value="2500">普通</option><option value="4000">長め</option></select>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="prevWord()" class="w-12 h-12 rounded-full border border-slate-200 bg-white flex justify-center items-center shadow-sm"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button id="btn-play-all" onclick="togglePlayPause()" class="px-8 h-12 rounded-full bg-amber-600 text-white font-bold shadow-md flex items-center gap-2"><i class="fa-solid fa-play"></i><span id="text-play-all">再生</span></button>
+                        <button onclick="nextWord()" class="w-12 h-12 rounded-full border border-slate-200 bg-white flex justify-center items-center shadow-sm"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <select id="select-rate" onchange="changeRate()" class="bg-transparent border-b border-slate-300 text-slate-600 text-xs py-0.5"><option value="0.8">0.8x</option><option value="1.0" selected>1.0x</option><option value="1.2">1.2x</option></select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 一覧タブ -->
+        <div id="tab-list" class="tab-content hidden space-y-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto max-h-[500px]">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500"><th class="py-3 px-4 w-16 text-center">マーク</th><th class="py-3 px-4 w-16">No.</th><th class="py-3 px-4">英単語</th><th class="py-3 px-4">意味</th><th class="py-3 px-4 hidden md:table-cell">例文</th></tr></thead>
+                        <tbody id="word-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const packs = {
+            pack7: [
+                {"word":"Anxiety","meaning":"不安、懸念","sentence":"Many candidates experience high anxiety before the formal exam.","translation":"多くの受験生が公式な試験の前に強い不安を感じる。"},
+                {"word":"Empathy","meaning":"共感、感情移入","sentence":"Nurses must develop deep empathy to understand patients' pain.","translation":"看護師は患者の痛みを理解するために深い共感を養う必要がある。"},
+                {"word":"Affection","meaning":"愛情、愛着","sentence":"The child felt warm affection for his grandparents.","translation":"その子供は祖父母に対して温かい愛情を感じていた。"},
+                {"word":"Hostility","meaning":"敵意、反抗","sentence":"The two rival teams showed mutual hostility during the match.","translation":"2つのライバルチームは試合中、互いに敵意を示した。"},
+                {"word":"Jealousy","meaning":"嫉妬、やきもち","sentence":"His sudden professional success triggered jealousy among classmates.","translation":"彼の突然のキャリアでの成功はクラスメイトの間に嫉妬を引き起こした。"},
+                {"word":"Compassion","meaning":"同情、慈悲心","sentence":"The volunteer group showed great compassion for the refugees.","translation":"ボランティア団体は難民に対して深い同情（慈悲心）を示した。"},
+                {"word":"Grief","meaning":"深い悲しみ、嘆き","sentence":"She was overwhelmed with grief after losing her pet dog.","translation":"彼女は愛犬を失った後、深い悲しみに打ちのめされた。"},
+                {"word":"Frustration","meaning":"挫折感、欲求不満","sentence":"The prolonged traffic delay caused immense frustration for commuters.","translation":"長引く交通渋滞は通勤者に激しいフラストレーション（不満）を引き起こした。"},
+                {"word":"Enthusiasm","meaning":"情熱、熱意","sentence":"The students showed great enthusiasm for the culture project.","translation":"生徒たちは文化プロジェクトに大変な熱意を示した。"},
+                {"word":"Relief","meaning":"安堵、安心、救援","sentence":"It was a great relief to hear that everyone survived the storm.","translation":"全員が嵐を生き延びたと聞いて本当に安心（安堵）した。"},
+                {"word":"Gratitude","meaning":"感謝、感謝の気持ち","sentence":"She expressed sincere gratitude to her mentor for the career advice.","translation":"彼女は仕事のアドバイスをくれたメンターに心からの感謝を表した。"},
+                {"word":"Optimism","meaning":"楽観主義、前向きさ","sentence":"Despite the severe deficit, she maintained her inherent optimism.","translation":"深刻な赤字にもかかわらず、彼女は持ち前の楽観主義を維持した。"},
+                {"word":"Pessimism","meaning":"悲観主義、後ろ向きさ","sentence":"His pessimism about the exam results affected his daily study.","translation":"試験結果に対する彼の悲観主義は毎日の勉強に影響を与えた。"},
+                {"word":"Confidence","meaning":"自信、信頼","sentence":"Passing the mock test boosted her confidence significantly.","translation":"模試に合格したことで彼女の自信は大いに高まった。"},
+                {"word":"Skepticism","meaning":"懐疑、疑い","sentence":"The committee viewed the radical proposal with extreme skepticism.","translation":"委員会はその急進的な提案を極めて強い懐疑的な目で見た。"},
+                {"word":"Pride","meaning":"誇り、自尊心","sentence":"He took great pride in graduating from the medical school.","translation":"彼は医学部を卒業したことに大きな誇りを持っていた。"},
+                {"word":"Shame","meaning":"恥、残念なこと","sentence":"It is a shame that you cannot join our summer festival.","translation":"あなたが私たちの夏祭りに参加できないのは残念なことだ。"},
+                {"word":"Humiliation","meaning":"屈辱、恥をかくこと","sentence":"The team suffered the humiliation of a major defeat.","translation":"チームは大敗という屈辱を味わった。"},
+                {"word":"Guilt","meaning":"罪悪感、罪","sentence":"The student was overcome with guilt after cheating on the test.","translation":"その生徒は試験で不正行為をした後、罪悪感に苛まれた。"},
+                {"word":"Sympathy","meaning":"同情、お悔やみ","sentence":"We offered our deepest sympathy to the victim's family.","translation":"私たちは被害者の家族に深い同情（お悔やみ）を捧げた。"},
+                {"word":"Attachment","meaning":"愛着、添付、取り付け","sentence":"The baby has a strong attachment to her mother.","translation":"その赤ちゃんは母親に強い愛着を持っている。"},
+                {"word":"Resentment","meaning":"憤り、不満","sentence":"His unfair behavior caused resentment among his peers.","translation":"彼の不公平な行動は仲間の間に憤りを引き起こした。"},
+                {"word":"Intimacy","meaning":"親密さ、親しさ","sentence":"Sharing personal secrets increased the intimacy between the friends.","translation":"個人的な秘密を共有したことで友人同士の親密さが増した。"},
+                {"word":"Isolation","meaning":"孤立、分離","sentence":"Social isolation is a severe challenge for elderly residents.","translation":"社会的孤立は高齢の住民にとって深刻な課題だ。"},
+                {"word":"Alienation","meaning":"疎外、疎外感","sentence":"The transfer student felt a temporary sense of alienation.","translation":"その転校生は一時的な疎外感を感じていた。"},
+                {"word":"Generosity","meaning":"寛大さ、気前の良さ","sentence":"The local library was built thanks to his generosity.","translation":"彼の寛大さ（寄付）のおかげで地元の図書館が建てられた。"},
+                {"word":"Tolerance","meaning":"寛容、耐性","sentence":"Cultural education enhances tolerance of diverse values.","translation":"文化教育は多様な価値観に対する寛容さを高める。"},
+                {"word":"Altruism","meaning":"利他主義、利他心","sentence":"The doctor's dedication to the poor was driven by altruism.","translation":"貧しい人々へのその医師の献身は利他心によって突き動かされていた。"},
+                {"word":"Selfishness","meaning":"利己主義、わがまま","sentence":"His extreme selfishness damaged his personal relationships.","translation":"彼の度を越したわがままは対人関係を台無しにした。"},
+                {"word":"Arrogance","meaning":"傲慢さ、思い上がり","sentence":"The manager's arrogance alienated many experienced staff.","translation":"マネージャーの傲慢さは多くの経験豊富なスタッフを遠ざけた。"},
+                {"word":"Humility","meaning":"謙虚さ、素直さ","sentence":"Humility is a crucial quality for lifelong learning.","translation":"謙虚さは生涯学習にとって極めて重要な資質だ。"},
+                {"word":"Loyalty","meaning":"忠誠心、誠実さ","sentence":"The dog showed endless loyalty to his kind owner.","translation":"その犬は親切な飼い主に限りない忠実さを示した。"},
+                {"word":"Betrayal","meaning":"裏切り","sentence":"The unexpected betrayal by his ally ruined his political plan.","translation":"味方による予期せぬ裏切りが彼の政治計画を台無しにした。"},
+                {"word":"Reconciliation","meaning":"和解、一致","sentence":"After a long dispute, they finally reached reconciliation.","translation":"長い論争の後、彼らはついに和解に達した。"},
+                {"word":"Hostility","meaning":"敵対心","sentence":"The dynamic presenter managed to ease the audience's hostility.","translation":"その精力的な発表者は聴衆の敵対心を和らげることに成功した。"},
+                {"word":"Solidarity","meaning":"結束、連帯","sentence":"The community showed great solidarity during the recovery period.","translation":"地域社会は復興期間中、素晴らしい結束（連帯）を示した。"},
+                {"word":"Admiration","meaning":"感嘆、憧れ","sentence":"She looked at her biology teacher with deep admiration.","translation":"彼女は生物学の先生を深い憧れの眼差しで見ていた。"},
+                {"word":"Contempt","meaning":"軽蔑、無視","sentence":"His dishonest conduct during the vote earned him contempt.","translation":"投票中の彼の不誠実な行為は軽蔑を買うことになった。"},
+                {"word":"Indifference","meaning":"無関心、冷淡","sentence":"The politician's indifference to local health issues angered residents.","translation":"地域の健康問題に対するその政治家の無関心は住民を怒らせた。"},
+                {"word":"Curiosity","meaning":"好奇心、詮索好き","sentence":"Childhood curiosity is the primary driver of scientific learning.","translation":"子供時代の好奇心は科学的学習の主要な原動力だ。"},
+                {"word":"Apathy","meaning":"冷淡、無関心、アパシー","sentence":"Student apathy toward school politics remains a challenge.","translation":"学校の自治に対する生徒の無関心（アパシー）は依然として課題だ。"},
+                {"word":"Prejudice","meaning":"偏見、先入観","sentence":"Education plays a core role in reducing racial prejudice.","translation":"教育は人種的偏見を減らすにおいて中心的な役割を果たす。"},
+                {"word":"Stereotype","meaning":"固定観念、ステレオタイプ","sentence":"The media often reinforces cultural stereotypes about gender roles.","translation":"メディアはしばしば性役割に関する文化的固定観念を強化する。"},
+                {"word":"Bias","meaning":"偏り、バイアス、先入観","sentence":"We must avoid cognitive bias when analyzing survey data.","translation":"調査データを分析する際は認知バイアスを避けなければならない。"},
+                {"word":"Embarrassment","meaning":"当惑、恥ずかしさ","sentence":"His minor speech error was a source of great embarrassment.","translation":"スピーチでの彼の些細な間違いは、彼にとって大いに恥ずかしいことだった。"},
+                {"word":"Envy","meaning":"羨望、嫉妬、羨む","sentence":"Her beautiful singing voice was the envy of the entire choir.","translation":"彼女の美しい歌声は聖歌隊全員の羨望の的だった。"},
+                {"word":"Dread","meaning":"恐怖、極度の不安","sentence":"The students filled with dread as the exam day approached.","translation":"試験日が近づくにつれ、生徒たちは極度の不安でいっぱいになった。"},
+                {"word":"Awe","meaning":"畏敬、畏怖","sentence":"We stood in absolute awe of the massive active volcano.","translation":"私たちはその巨大な活火山を前にして完全に畏敬の念に打たれた。"},
+                {"word":"Despair","meaning":"絶望、あきらめ","sentence":"The lost traveler fell into despair as night arrived.","translation":"夜が訪れると、迷子の旅行者は絶望に陥った。"},
+                {"word":"Comfort","meaning":"快適さ、慰め、慰める","sentence":"Listening to classical music provides great comfort after work.","translation":"クラシック音楽を聴くことは仕事の後に大きな慰め（快適さ）を与える。"},
+                {"word":"Pleasure","meaning":"喜び、楽しみ","sentence":"He takes great pleasure in reading historical essays.","translation":"彼は歴史的なエッセイを読むことに大きな喜びを感じている。"},
+                {"word":"Disgust","meaning":"嫌悪、不快感","sentence":"The smell of rotten organic waste filled him with disgust.","translation":"腐った有機廃棄物の臭いは彼を強い嫌悪感で満たした。"},
+                {"word":"Fury","meaning":"激怒、怒り","sentence":"The unfair evaluation triggered the absolute fury of the team.","translation":"不公平な評価がチームの激しい憤り（激怒）を引き起こした。"},
+                {"word":"Indignation","meaning":"義憤、憤り","sentence":"The rise in crime rate sparked public indignation.","translation":"犯罪率の上昇は市民の憤り（義憤）を引き起こした。"},
+                {"word":"Sorrow","meaning":"悲しみ、哀愁","sentence":"The melody of the song expressed a profound sense of sorrow.","translation":"その歌のメロディは深い悲しみを表現していた。"},
+                {"word":"Joy","meaning":"喜び、嬉しさ","sentence":"Her eyes filled with joy when she saw the top score.","translation":"最高点を見たとき、彼女の目は喜びで満たされた。"},
+                {"word":"Terror","meaning":"恐怖、テロ","sentence":"The sudden earthquake struck terror into the residents' hearts.","translation":"突然の地震は住民の心に恐怖を植え付けた。"},
+                {"word":"Fascination","meaning":"魅了、強い興味","sentence":"She has a lifelong fascination with ancient marine biology.","translation":"彼女は古代の海洋生物学に生涯にわたる強い関心（魅了）を抱いている。"},
+                {"word":"Boredom","meaning":"退屈、倦怠感","sentence":"The repetitive task caused immense boredom among researchers.","translation":"反復的なタスクは研究者の間に計り知れない退屈さを引き起こした。"},
+                {"word":"Regret","meaning":"後悔、残念に思う","sentence":"She expressed regret for not studying harder for college exams.","translation":"彼女は大学入試に向けてもっと熱心に勉強しなかったことを後悔した。"},
+                {"word":"Guilt","meaning":"有罪、罪","sentence":"The evidence proved the suspect's guilt beyond doubt.","translation":"証拠は容疑者の有罪を疑いなく証明した。"},
+                {"word":"Innocence","meaning":"無実、純真さ","sentence":"The young lawyer fought to prove the suspect's innocence.","translation":"若い弁護士は容疑者の無実を証明するために戦った。"},
+                {"word":"Hostility","meaning":"敵意、反対","sentence":"The community's hostility toward the project slowly diminished.","translation":"プロジェクトに対する地域社会の敵意は徐々に和らいだ。"},
+                {"word":"Friendship","meaning":"友情、友好関係","sentence":"Language exchange programs help establish international friendships.","translation":"語学交換プログラムは国際的な友情を築くのに役立つ。"},
+                {"word":"Rivalry","meaning":"競争、ライバル意識","sentence":"The rivalry between the two colleges dates back to Edo period.","translation":"2つの大学の間のライバル意識は江戸時代まで遡る。"},
+                {"word":"Embarrassment","meaning":"恥ずかしさ","sentence":"To avoid embarrassment, please review the safety rules.","translation":"恥をかくことを避けるために、安全ルールを確認してください。"},
+                {"word":"Aggression","meaning":"攻撃性、侵害","sentence":"The study analyzed factors that trigger aggression in animals.","translation":"その研究は動物の攻撃性を引き起こす要因を分析した。"},
+                {"word":"Submission","meaning":"提出、服従","sentence":"The deadline for the homework submission is Friday noon.","translation":"宿題の提出期限は金曜日の正午だ。"},
+                {"word":"Affection","meaning":"愛情","sentence":"She has a deep affection for the local traditional arts.","translation":"彼女は地元の伝統芸術に深い愛情を持っている。"},
+                {"word":"Distrust","meaning":"不信感、疑い","sentence":"The repeated lies created permanent distrust between the partners.","translation":"繰り返される嘘はパートナーの間に決定的な不信感を生み出した。"},
+                {"word":"Harmony","meaning":"調和、ハーモニー","sentence":"The building was designed to stand in harmony with nature.","translation":"その建物は自然と調和して立つように設計された。"},
+                {"word":"Discord","meaning":"不和、不一致","sentence":"The budget deficit caused severe discord within the committee.","translation":"予算不足は委員会内に深刻な不和（対立）を引き起こした。"},
+                {"word":"Conflict","meaning":"対立、紛争","sentence":"The goal is to resolve the border conflict peacefully.","translation":"目標は国境紛争を平和的に解決することだ。"},
+                {"word":"Cooperation","meaning":"協力、共同作業","sentence":"Protecting biodiversity requires close cooperation between nations.","translation":"生物多様性の保護は国家間の緊密な協力を必要とする。"},
+                {"word":"Alienation","meaning":"疎外","sentence":"Rapid urban development can cause social alienation.","translation":"急速な都市開発は社会的疎外を引き起こす可能性がある。"},
+                {"word":"Isolation","meaning":"孤立","sentence":"The laboratory was built in complete isolation for safety.","translation":"その研究室は安全のために完全な孤立（隔離）状態で建てられた。"},
+                {"word":"Loneliness","meaning":"孤独、寂しさ","sentence":"Many university freshman experience temporary loneliness.","translation":"多くの大学新入生が一時的な孤独を感じる。"},
+                {"word":"Solitude","meaning":"孤独（自ら望むもの）、独居","sentence":"The author preferred the quiet solitude of the countryside.","translation":"著者は田舎の静かな孤独（独りきりの時間）を好んだ。"},
+                {"word":"Belonging","meaning":"帰属、帰属意識","sentence":"Joining school clubs gives students a sense of belonging.","translation":"部活動に参加することは生徒に帰属意識を与える。"},
+                {"word":"Support","meaning":"支持、支援、支える","sentence":"The government promised substantial support to local agriculture.","translation":"政府は地元の農業への多大な支援を約束した。"},
+                {"word":"Rejection","meaning":"拒絶、拒否","sentence":"He received a rejection letter from his primary college choice.","translation":"彼は第一志望の大学から不合格通知（拒絶の手紙）を受け取った。"},
+                {"word":"Acceptance","meaning":"受け入れ、承認、合格","sentence":"The acceptance of alternative energy sources is rising.","translation":"代替エネルギー源の受け入れは高まっている。"},
+                {"word":"Empathy","meaning":"感情移入","sentence":"Novels help us develop empathy by experiencing other lives.","translation":"小説は他人の人生を体験することで共感（感情移入）を養うのを助ける。"},
+                {"word":"Indifference","meaning":"冷淡さ","sentence":"We must not show indifference to global environmental issues.","translation":"地球の環境問題に対して無関心（冷淡さ）を示してはならない。"},
+                {"word":"Prejudice","meaning":"偏見","sentence":"We must strive to eliminate racial prejudice from classrooms.","translation":"私たちは教室から人種的偏見を排除するよう努めなければならない。"},
+                {"word":"Tolerance","meaning":"寛容","sentence":"Religious tolerance is a fundamental principle of democracy.","translation":"宗教的寛容は民主主義の根本的な原則だ。"},
+                {"word":"Appreciation","meaning":"感謝、正しい評価、鑑賞","sentence":"The museum guides enhanced our appreciation of Edo history.","translation":"博物館のガイドが私たちの江戸の歴史に対する理解（正しい評価）を高めた。"},
+                {"word":"Insecurity","meaning":"不安定、心の細さ、不安全","sentence":"Economic instability causes deep job insecurity among youth.","translation":"経済の不安定さは若者の間に深刻な雇用の不安（不安全）を引き起こす。"},
+                {"word":"Jealousy","meaning":"やきもち","sentence":"Jealousy can damage even the strongest friendship.","translation":"嫉妬はどれほど強い友情をも台無しにする可能性がある。"},
+                {"word":"Grief","meaning":"悲嘆","sentence":"The sorrow of the community turned into collective grief.","translation":"地域社会の悲しみは集団的な悲嘆（深い嘆き）へと変わった。"},
+                {"word":"Comfort","meaning":"なぐさめ","sentence":"Her kind words were a great comfort during my illness.","translation":"私が病気の間、彼女の親切な言葉は大きな慰めになった。"},
+                {"word":"Frustration","meaning":"欲求不満","sentence":"He expressed his frustration with the repetitive nature of the task.","translation":"彼はそのタスクの単調（反復的）な性質に対する不満を表明した。"},
+                {"word":"Rivalry","meaning":"ライバル関係","sentence":"The intense rivalry stimulated both research teams to work harder.","translation":"激しい競争（ライバル関係）が、双方の研究チームをさらに努力するよう刺激した。"},
+                {"word":"Gratitude","meaning":"謝意","sentence":"We sent a thank-you letter to show our deep gratitude.","translation":"私たちは深い感謝を示すためにサンキューレターを送った。"},
+                {"word":"Distrust","meaning":"不信","sentence":"Public distrust of the media has increased in recent decades.","translation":"メディアに対する世間の不信感はここ数十年で増大している。"},
+                {"word":"Alienation","meaning":"疎外感","sentence":"Living in a busy city can paradoxically foster deep alienation.","translation":"忙しい都会に住むことは、逆説的に深い疎外感を育むことがある。"},
+                {"word":"Humility","meaning":"謙遜","sentence":"He accepted the international scientific prize with great humility.","translation":"彼は大きな謙虚さ（謙遜）をもってその国際的な科学賞を受け入れた。"},
+                {"word":"Humiliation","meaning":"屈辱","sentence":"She tried hard to hide her humiliation after the presentation failure.","translation":"彼女はプレゼンの失敗の後、屈辱を隠そうと必死だった。"},
+                {"word":"Awe","meaning":"畏敬の念","sentence":"The pristine beauty of the space station filled them with awe.","translation":"宇宙ステーションのありのままの美しさは、彼らを畏敬の念で満たした。"},
+                {"word":"Solidarity","meaning":"団結","sentence":"The workers held a strike to show solidarity with their leader.","translation":"労働者たちは指導者との団結を示すためにストライキを行った。"}
+            ],
+            pack8: [
+                {"word":"Philosophy","meaning":"哲学、考え方","sentence":"Socrates is a fundamental figure in ancient Western philosophy.","translation":"ソクラテスは古代西洋哲学における根本的な人物だ。"},
+                {"word":"History","meaning":"歴史、経歴","sentence":"Understanding history is essential to prevent past mistakes.","translation":"歴史を理解することは過去の間違いを防ぐために不可欠だ。"},
+                {"word":"Literature","meaning":"文学、文献","sentence":"She decided to major in classic English literature at college.","translation":"彼女は大学で古典イギリス文学を専攻することに決めた。"},
+                {"word":"Anthropology","meaning":"人類学","sentence":"Anthropology studies the origin and evolution of human cultures.","translation":"人類学は人間の文化の起源と進化を研究する。"},
+                {"word":"Archaeology","meaning":"考古学","sentence":"Archaeology relies on excavating physical objects from the past.","translation":"考古学は過去の物理的な遺物を発掘することに依存している。"},
+                {"word":"Sociology","meaning":"社会学","sentence":"Sociology analyzes how social structures affect individuals.","translation":"社会学は社会構造が個人にどのように影響を与えるかを分析する。"},
+                {"word":"Psychology","meaning":"心理学","sentence":"The professor presented a basic lecture on cognitive psychology.","translation":"教授は認知心理学に関する基本的な講義を行った。"},
+                {"word":"Linguistics","meaning":"言語学","sentence":"Linguistics is the scientific study of human language structure.","translation":"言語学は人間の言語構造に関する科学的な研究だ。"},
+                {"word":"Theology","meaning":"神学","sentence":"He spent years studying medieval theology at the monastery.","translation":"彼は修道院で中世の神学を学ぶことに何年も費やした。"},
+                {"word":"Aesthetics","meaning":"美学、美術理論","sentence":"The design of the museum was praised for its modern aesthetics.","translation":"博物館のデザインはその現代的な美学で称賛された。"},
+                {"word":"Art","meaning":"芸術、美術、技術","sentence":"The gallery displays traditional and contemporary Japanese art.","translation":"ギャラリーは伝統的および現代的な日本の芸術を展示している。"},
+                {"word":"Culture","meaning":"文化","sentence":"Cultural differences can sometimes cause academic disputes.","translation":"文化的な違いは時に学術的な論争を引き起こすことがある。"},
+                {"word":"Tradition","meaning":"伝統","sentence":"We must preserve our local traditions for future generations.","translation":"私たちは将来の世代のために地元の伝統を保護しなければならない。"},
+                {"word":"Heritage","meaning":"遺産、継承物","sentence":"The historic town was designated as a World Heritage site.","translation":"その歴史的な町は世界遺産（World Heritage）に指定された。"},
+                {"word":"Civilization","meaning":"文明","sentence":"Ancient Egyptian civilization developed along the Nile River.","translation":"古代エジプト文明はナイル川沿いに発達した。"},
+                {"word":"Empire","meaning":"帝国","sentence":"The Roman Empire had a profound influence on modern Europe.","translation":"ローマ帝国は現代のヨーロッパに深い影響を与えた。"},
+                {"word":"Dynasty","meaning":"王朝、代々","sentence":"The museum exhibits rare ceramics from the Ming dynasty.","translation":"博物館は明王朝の希少な陶磁器を展示している。"},
+                {"word":"Renaissance","meaning":"ルネサンス、文芸復興","sentence":"The Renaissance triggered a dramatic shift in Western art.","translation":"ルネサンスは西洋芸術における劇的な変化を引き起こした。"},
+                {"word":"Enlightenment","meaning":"啓蒙、啓発","sentence":"The Age of Enlightenment emphasized rational thinking and science.","translation":"啓蒙時代は合理的思考と科学を強調した。"},
+                {"word":"Sovereignty","meaning":"主権、統治権","sentence":"Respecting national sovereignty is a core principle of treaty.","translation":"国家主権を尊重することは条約の根底にある主要な原則だ。"},
+                {"word":"Colony","meaning":"植民地、集団生息地","sentence":"The island was once a colony of the Spanish Empire.","translation":"その島はかつてスペイン帝国の植民地だった。"},
+                {"word":"Independence","meaning":"独立、自立","sentence":"The country celebrated its fiftieth anniversary of independence.","translation":"その国は独立50周年を祝った。"},
+                {"word":"Revolution","meaning":"革命、大改革、回転","sentence":"The industrial revolution caused rapid urban development.","translation":"産業革命は急速な都市開発を引き起こした。"},
+                {"word":"Constitution","meaning":"憲法、体質、構成","sentence":"The country adopted a new constitution after the war.","translation":"その国は戦後、新しい憲法を採択した。"},
+                {"word":"Democracy","meaning":"民主主義","sentence":"Freedom of speech is the absolute core of democracy.","translation":"言論の自由は民主主義の絶対的な核心だ。"},
+                {"word":"Monarchy","meaning":"君主制、君主国","sentence":"The small European nation has maintained its monarchy.","translation":"その小さなヨーロッパの国は君主制を維持している。"},
+                {"word":"Aristocracy","meaning":"貴族、貴族階級","sentence":"In ancient times, political power belonged to the aristocracy.","translation":"古代においては、政治的権力は貴族階級に属していた。"},
+                {"word":"Bureaucracy","meaning":"官僚主義、官僚制度","sentence":"The administrative process was delayed by complex bureaucracy.","translation":"行政手続きは複雑な官僚主義によって遅れた。"},
+                {"word":"Feudalism","meaning":"封建制度","sentence":"Feudalism was the dominant social system in medieval Europe.","translation":"封建制度は中世ヨーロッパにおける支配的な社会制度だった。"},
+                {"word":"Nationalism","meaning":"ナショナリズム、国家主義","sentence":"The rise of nationalism led to severe border conflicts.","translation":"ナショナリズムの台頭は深刻な国境紛争を引き起こした。"},
+                {"word":"Imperialism","meaning":"帝国主義","sentence":"The textbook analyzes the historical impact of Western imperialism.","translation":"その教科書は西洋の帝国主義がもたらした歴史的影響を分析している。"},
+                {"word":"Capitalism","meaning":"資本主義","sentence":"Modern global commerce is primarily based on capitalism.","translation":"現代のグローバル商業は主に資本主義に基づいている。"},
+                {"word":"Socialism","meaning":"社会主義","sentence":"The lecture compared the economic concepts of capitalism and socialism.","translation":"講義は資本主義と社会主義の経済概念を比較した。"},
+                {"word":"Liberalism","meaning":"自由主義","sentence":"Political liberalism advocates for individual rights and freedom.","translation":"政治的自由主義は個人の権利と自由を提唱する。"},
+                {"word":"Conservatism","meaning":"保守主義","sentence":"Conservatism often emphasizes preserving traditional social norms.","translation":"保守主義はしばしば伝統的な社会的規範の保存を強調する。"},
+                {"word":"Fascism","meaning":"ファシズム","sentence":"The history class studied the rise of fascism in Europe.","translation":"歴史の授業でヨーロッパにおけるファシズムの台頭を学んだ。"},
+                {"word":"Secularism","meaning":"世俗主義、宗教的政教分離","sentence":"Secularism ensures that state policy remains free from religious bias.","translation":"世俗主義は、国家の政策が宗教的偏見から自由であり続けることを保証する。"},
+                {"word":"Pluralism","meaning":"多元主義、複数存在","sentence":"The school promotes cultural pluralism to respect diverse heritages.","translation":"学校は多様な遺産を尊重するために文化的多元主義を推進している。"},
+                {"word":"Anarchism","meaning":"無政府主義","sentence":"Anarchism advocates for a society based on voluntary cooperation.","translation":"無政府主義は自発的な協力に基づいた社会を提唱する。"},
+                {"word":"Fundamentalism","meaning":"原理主義","sentence":"The report discussed the social origin of religious fundamentalism.","translation":"報告書は宗教的原理主義の社会的起源について議論した。"},
+                {"word":"Scholar","meaning":"学者","sentence":"The famous scholar dedicated his life to researching Edo history.","translation":"その有名な学者は江戸の歴史の研究に生涯を捧げた。"},
+                {"word":"Intellectual","meaning":"知識人、知的な","sentence":"Language study stimulates children's intellectual development.","translation":"語学学習は子供の知的な発達を刺激する。"},
+                {"word":"Academy","meaning":"学士院、専門学校","sentence":"She received a scholarship to study at the art academy.","translation":"彼女は芸術専門学校で学ぶための奨学金を受け取った。"},
+                {"word":"Discipline","meaning":"規律、学問分野、訓練する","sentence":"Linguistics is a highly systematic academic discipline.","translation":"言語学は非常に体系的な学問分野だ。"},
+                {"word":"Curriculum","meaning":"カリキュラム、教育課程","sentence":"The school revised its curriculum to include computer coding.","translation":"学校はコンピューターコーディングを含めるためにカリキュラムを改訂した。"},
+                {"word":"Syllabus","meaning":"シラバス、講義要綱","sentence":"The professor distributed the biology course syllabus on step one.","translation":"教授は第1段階で生物学コースのシラバスを配布した。"},
+                {"word":"Seminar","meaning":"ゼミ、セミナー、研究集会","sentence":"The history seminar focused on the primary causes of the war.","translation":"歴史のセミナーは戦争の主要な原因に焦点を当てた。"},
+                {"word":"Lecture","meaning":"講義、講演","sentence":"The chemistry lecture was exceptionally complex and difficult.","translation":"化学の講義は例外的に複雑で難しかった。"},
+                {"word":"Thesis","meaning":"論文、学位論文、命題","sentence":"She submitted her graduation thesis on evolutionary biology.","translation":"彼女は進化生物学に関する卒業論文を提出した。"},
+                {"word":"Dissertation","meaning":"学術論文（特に博士論文）","sentence":"The researcher spent three years writing his doctoral dissertation.","translation":"その研究者は博士論文の執筆に3年を費やした。"},
+                {"word":"Exhibition","meaning":"展示会、博覧会","sentence":"The museum hosted a major exhibition of traditional tools.","translation":"博物館は伝統的な道具の大規模な展示会を開催した。"},
+                {"word":"Gallery","meaning":"美術館、画廊","sentence":"The modern gallery attracted many tourists to the city.","translation":"その現代的な美術館は都市に多くの観光客を引きつけた。"},
+                {"word":"Masterpiece","meaning":"傑作、代表作","sentence":"The painting is considered the artist's ultimate masterpiece.","translation":"その絵画はアーティストの究極の傑作とみなされている。"},
+                {"word":"Genre","meaning":"ジャンル、様式","sentence":"Sci-fi is a highly popular genre in modern literature.","translation":"SFは現代文学において非常に人気のあるジャンルだ。"},
+                {"word":"Classic","meaning":"古典の、一流の、古典","sentence":"Reading classic novels expands your English vocabulary.","translation":"古典小説を読むことは英語の語彙を広げる。"},
+                {"word":"Contemporary","meaning":"現代の、同時代の","sentence":"The museum exhibits contemporary art as well as traditional heritage.","translation":"博物館は伝統的な遺産だけでなく現代美術も展示している。"},
+                {"word":"Aesthetic","meaning":"審美的な、美的な","sentence":"The architect focused on the aesthetic aspect of the museum.","translation":"建築家は博物館の美的な側面に焦点を当てた。"},
+                {"word":"Critic","meaning":"批評家、非難する人","sentence":"The famous art critic praised the young painter's work.","translation":"有名な美術批評家がその若い画家の作品を称賛した。"},
+                {"word":"Review","meaning":"レビュー、批評、復習、再検討","sentence":"My teacher always emphasizes the importance of daily review.","translation":"先生はいつも毎日の復習の大切さを強調する。"},
+                {"word":"Interpretation","meaning":"解釈、説明、通訳","sentence":"The poem has many different academic interpretations.","translation":"その詩には多くの異なる学術的な解釈がある。"},
+                {"word":"Metaphor","meaning":"隠喩、比喩","sentence":"The author used an obscure metaphor to represent isolation.","translation":"著者は孤立を表現するために曖昧な隠喩（比喩）を使った。"},
+                {"word":"Symposium","meaning":"討論会、シンポジウム","sentence":"Scientists from Japan gathered for the space study symposium.","translation":"日本の科学者たちが宇宙研究シンポジウムのために集まった。"},
+                {"word":"Archive","meaning":"記録保管所、公文書","sentence":"The university library maintains a digital archive of ancient essays.","translation":"大学図書館は古代のエッセイのデジタルアーカイブを維持している。"},
+                {"word":"Patronage","meaning":"後援、愛顧、保護","sentence":"During the Renaissance, art flourished under the patronage of wealthy families.","translation":"ルネサンス期、芸術は富裕な家族の後援（パトロン）のもとで繁栄した。"},
+                {"word":"Manuscript","meaning":"原稿、写本","sentence":"The museum displays traditional manuscripts from the Edo period.","translation":"博物館は江戸時代の伝統的な手書き原稿を展示している。"},
+                {"word":"Scribe","meaning":"写字生、書記","sentence":"Before printing technology, scribes copied books by hand.","translation":"印刷技術の前、写字生（書記）たちは手作業で本を複製していた。"},
+                {"word":"Calligraphy","meaning":"書道、カリグラフィー","sentence":"Calligraphy is a highly respected traditional art in East Asia.","translation":"書道（カリグラフィー）は東アジアにおいて非常に尊敬されている伝統芸術だ。"},
+                {"word":"Symphony","meaning":"交響曲、シンフォニー","sentence":"Beethoven's ninth symphony is famous all over the world.","translation":"ベートーベンの第九交響曲は世界中で有名だ。"},
+                {"word":"Orchestra","meaning":"オーケストラ、管弦楽団","sentence":"The school orchestra practiced hard for the autumn festival.","translation":"学校のオーケストラは秋のフェスティバルのために熱心に練習した。"},
+                {"word":"Drama","meaning":"演劇、戯曲、ドラマ","sentence":"Joining the drama club enhanced her communication skills.","translation":"演劇部に入部したことで彼女のコミュニケーション能力が向上した。"},
+                {"word":"Theater","meaning":"劇場、映画館","sentence":"The ancient Greek theater was designed for excellent acoustics.","translation":"古代ギリシャの劇場は優れた音響効果のために設計されていた。"},
+                {"word":"Ritual","meaning":"儀式、しきたり","sentence":"The tribe conducted a traditional ritual to pray for rain.","translation":"部族は雨を祈るための伝統的な儀式を行った。"},
+                {"word":"Mythology","meaning":"神話、神話学","sentence":"Greek mythology has inspired countless works of art and literature.","translation":"ギリシャ神話は無数の芸術や文学作品にインスピレーションを与えてきた。"},
+                {"word":"Folklore","meaning":"民間伝承、フォークロア","sentence":"The scholar researched local folklore in rural towns.","translation":"学者は地方の町に伝わる地元の民間伝承（民話）を研究した。"},
+                {"word":"Legend","meaning":"伝説、伝説的人物","sentence":"The textbook explains the historical origins of the King Arthur legend.","translation":"その教科書はアーサー王伝説の歴史的起源を説明している。"},
+                {"word":"Saga","meaning":"大河小説、サガ、武勇伝","sentence":"The trilogy is a massive family saga set in Edo period.","translation":"その三部作は江戸時代を舞台にした壮大な家族のサガ（物語）だ。"},
+                {"word":"Artifact","meaning":"人工遺物、工芸品","sentence":"Archaeologists excavated ancient ceramic artifacts from the site.","translation":"考古学者たちはその遺跡から古代の陶磁器の遺物を発掘した。"},
+                {"word":"Excavation","meaning":"発掘、開削","sentence":"The excavation of the ancient pyramid revealed deep hidden chambers.","translation":"古代ピラミッドの発掘により、奥深くに隠された部屋が明らかになった。"},
+                {"word":"Ruins","meaning":"遺跡、廃墟、破壊する","sentence":"Many tourists visit the ruins of the medieval castle.","translation":"多くの観光客が中世の城の遺跡を訪れる。"},
+                {"word":"Monuments","meaning":"記念碑、歴史的建造物","sentence":"The capital features many monuments dedicated to historical heroes.","translation":"首都には歴史的英雄に捧げられた多くの記念碑がある。"},
+                {"word":"Statue","meaning":"像、彫像","sentence":"A bronze statue of the school founder stands in the lobby.","translation":"ロビーに学校創設者の青銅製の彫像が立っている。"},
+                {"word":"Sculpture","meaning":"彫刻、彫刻作品","sentence":"The exhibition displays modern stone sculptures from domestic artists.","translation":"その展示会は、国内のアーティストによる現代の石彫刻を展示している。"},
+                {"word":"Painting","meaning":"絵画、塗装","sentence":"She enjoys painting quiet countryside landscapes on weekends.","translation":"彼女は週末に静かな田舎の風景を絵に描く（絵画）ことを楽しんでいる。"},
+                {"word":"Illustration","meaning":"イラスト、図、実例","sentence":"Adding dynamic illustrations can enhance textbook clarity.","translation":"鮮明なイラスト（図）を加えることで教科書の分かりやすさを高めることができる。"},
+                {"word":"Aesthetics","meaning":"美学","sentence":"The study of aesthetics analyzes the nature of beauty and art.","translation":"美学の研究は、美と芸術の本質を分析する。"},
+                {"word":"Philosophy","meaning":"人生観","sentence":"His personal philosophy is to maintain a positive attitude.","translation":"彼の個人的な人生観（信条）は前向きな態度を維持することだ。"},
+                {"word":"Linguistics","meaning":"言語学研究","sentence":"Linguistics provides useful insights into how children acquire speech.","translation":"言語学（言語研究）は、子供がどのように言葉を習得するかについて有用な知見を与える。"},
+                {"word":"Curriculum","meaning":"履修課程","sentence":"A standardized curriculum ensures consistent academic quality.","translation":"標準化されたカリキュラム（教育課程）は、一貫した学術的質を保証する。"},
+                {"word":"Discipline","meaning":"しつけ、学問","sentence":"Self-discipline is essential when preparing for college exams.","translation":"大学入試の準備をする際には自己規律（自制心）が不可欠だ。"},
+                {"word":"Curator","meaning":"学芸員、キュレーター","sentence":"The curator explained the historical context of the traditional tools.","translation":"学芸員（キュレーター）は伝統的な道具の歴史的背景を説明した。"},
+                {"word":"Patron","meaning":"後援者、常連客","sentence":"The local library is seeking corporate patrons to fund its expansion.","translation":"地元の図書館は拡張資金を調達するために企業の後援者を求めている。"},
+                {"word":"Renaissance","meaning":"復興","sentence":"The rural town is experiencing a cultural renaissance.","translation":"その地方の町は、今文化的な復興を経験している。"},
+                {"word":"Enlightenment","meaning":"啓蒙主義","sentence":"Enlightenment ideals influenced the founders of modern republics.","translation":"啓蒙主義の理想は、現代の共和国の創設者たちに影響を与えた。"},
+                {"word":"Antiquity","meaning":"古代、古さ","sentence":"The museum exhibits rare coins preserved from classical antiquity.","translation":"博物館は、古典古代から保存されている希少な硬貨を展示している。"},
+                {"word":"Chronology","meaning":"年代記、年代順の配列","sentence":"The history teacher presented a clear chronology of the Edo dynasty.","translation":"歴史の先生は江戸王朝の明確な年代記（年表）を提示した。"},
+                {"word":"Folklore","meaning":"伝承","sentence":"Folklore plays a vital role in preserving cultural identity.","translation":"民間伝承は文化的なアイデンティティを維持するにおいて極めて重要な役割を果たす。"},
+                {"word":"Epic","meaning":"叙事詩、壮大な","sentence":"The movie tells an epic saga of space exploration.","translation":"その映画は宇宙探査の壮大なサガ（叙事詩的な物語）を語っている。"},
+                {"word":"Tragedy","meaning":"悲劇、惨事","sentence":"The novel is a deep tragedy about two rival families.","translation":"その小説は、2つのライバル関係にある家族についての深い悲劇だ。"},
+                {"word":"Comedy","meaning":"喜劇、コメディ","sentence":"The drama club performed a classic Shakespearean comedy.","translation":"演劇部はシェイクスピアの古典的な喜劇を上演した。"},
+                {"word":"Sovereign","meaning":"主権者、君主、独立した","sentence":"Every sovereign nation has the right to manage its domestic budget.","translation":"すべての独立した（主権を持つ）国家は自国の予算を管理する権利がある。"},
+                {"word":"Emperor","meaning":"皇帝、天皇","sentence":"The historical document describes the reign of the ancient emperor.","translation":"その歴史的文書は、古代の皇帝（天皇）の治世を記述している。"}
+            ],
+            pack9: [
+                {"word":"Media","meaning":"メディア、媒体","sentence":"The mass media has a profound influence on public opinion.","translation":"マスメディアは公的な世論に深い影響を与える。"},
+                {"word":"Internet","meaning":"インターネット","sentence":"The internet is a vital infrastructure for modern global commerce.","translation":"インターネットは現代のグローバル商業にとって不可欠なインフラだ。"},
+                {"word":"Communication","meaning":"意思疎通、通信","sentence":"Excellent communication skills are essential in college life.","translation":"優れたコミュニケーション（意思疎通）能力は大学生活で不可欠だ。"},
+                {"word":"Information","meaning":"情報、知識","sentence":"We can easily access a substantial amount of information online.","translation":"私たちはオンラインで膨大な量の情報に容易にアクセスできる。"},
+                {"word":"Broadcasting","meaning":"放送、放映","sentence":"The national broadcasting company aired the dynamic debate live.","translation":"国営放送局は精力的な討論を生放送で放映した。"},
+                {"word":"Journalism","meaning":"ジャーナリズム、報道界","sentence":"Objective journalism is critical for maintaining a healthy democracy.","translation":"客観的なジャーナリズム（報道）は、健全な民主主義を維持するために極めて重要だ。"},
+                {"word":"Advertising","meaning":"広告、宣伝","sentence":"The firm spent a lot of money on online video advertising.","translation":"その会社はオンライン動画広告に多額のお金を費やした。"},
+                {"word":"Database","meaning":"データベース","sentence":"The library maintains a complex database of historical artifacts.","translation":"図書館は歴史的工芸品の複雑なデータベースを維持している。"},
+                {"word":"Software","meaning":"ソフトウェア","sentence":"The programmer updated the security software to prevent leaks.","translation":"プログラマーは情報流出を防ぐためにセキュリティソフトウェアを更新した。"},
+                {"word":"Hardware","meaning":"ハードウェア、金物類","sentence":"Upgrading the hardware enhanced the computer's processing speed.","translation":"ハードウェアをアップグレードしたことで、コンピューターの処理速度が向上した。"},
+                {"word":"Algorithm","meaning":"アルゴリズム、計算手順","sentence":"The search engine uses a sophisticated algorithm to rank websites.","translation":"検索エンジンはウェブサイトを順位づけするために洗練されたアルゴリズムを使用している。"},
+                {"word":"Server","meaning":"サーバー、給仕者","sentence":"The online server crashed due to a sudden surge in visitor traffic.","translation":"訪問者アクセスの突然の急増により、オンラインサーバーがクラッシュした。"},
+                {"word":"Network","meaning":"ネットワーク、連絡網","sentence":"Social networks changed how high school students share opinions.","translation":"ソーシャルネットワーク（SNS）は、高校生が意見を共有する方法を変えた。"},
+                {"word":"Platform","meaning":"プラットフォーム、教壇、駅のホーム","sentence":"The educational platform offers a wide range of vocabulary lessons.","translation":"その教育プラットフォームは、幅広い語彙レッスンを提供している。"},
+                {"word":"Application","meaning":"アプリケーション、申請、応用","sentence":"The translation application is highly useful for tourists.","translation":"その翻訳アプリケーション（アプリ）は旅行者にとって非常に便利だ。"},
+                {"word":"Interface","meaning":"インターフェース、接触領域","sentence":"The application features a simple user interface that is easy to follow.","translation":"そのアプリはわかりやすく簡単なユーザーインターフェースを特徴としている。"},
+                {"word":"Processor","meaning":"プロセッサー、処理装置","sentence":"This tablet is equipped with a highly advanced dynamic processor.","translation":"このタブレットには、高度に進んだダイナミックなプロセッサーが搭載されている。"},
+                {"word":"Bandwidth","meaning":"帯域幅、データ転送能力","sentence":"Playing high-quality videos requires a substantial network bandwidth.","translation":"高画質な動画を再生するには、十分なネットワーク帯域幅（通信容量）が必要だ。"},
+                {"word":"Encryption","meaning":"暗号化","sentence":"Encryption is essential for protecting private financial data online.","translation":"オンライン上で個人の金銭データを保護するために、暗号化は不可欠だ。"},
+                {"word":"Privacy","meaning":"プライバシー、私生活","sentence":"Social media users must be careful about protecting their privacy.","translation":"ソーシャルメディアのユーザーはプライバシーの保護に注意しなければならない。"},
+                {"word":"Data","meaning":"データ","sentence":"We collected empirical data to test our primary hypothesis.","translation":"私たちは主要な仮説をテストするために実験データ（実証データ）を収集した。"},
+                {"word":"Security","meaning":"セキュリティ、警備、安全","sentence":"The university upgraded its network security to prevent hacking.","translation":"大学はハッキングを防ぐためにネットワークセキュリティをアップグレードした。"},
+                {"word":"Digital","meaning":"デジタルの","sentence":"The digital divide is widening between urban and rural districts.","translation":"都市部と地方（田舎）の間でデジタルデバイド（格差）が広がっている。"},
+                {"word":"Virtual","meaning":"仮想の、事実上の","sentence":"The program provides a virtual classroom environment for distant learning.","translation":"そのプログラムは遠隔学習のために仮想の教室環境を提供する。"},
+                {"word":"Online","meaning":"オンラインの、ネット上の","sentence":"Taking online exams has become a common practice in college.","translation":"オンライン試験を受けることは大学で一般的なことになった。"},
+                {"word":"Offline","meaning":"オフラインの、ネットから切断された","sentence":"The database can be accessed offline via the local equipment.","translation":"そのデータベースは地元の設備を介してオフラインでアクセスできる。"},
+                {"word":"Wireless","meaning":"無線の、ワイヤレスの","sentence":"The building features free wireless internet access for all residents.","translation":"建物はすべての居住者のために無料の無線インターネットアクセスを特徴としている。"},
+                {"word":"Mobile","meaning":"可動性の、携帯式の","sentence":"Mobile devices consume a lot of battery power during reading tasks.","translation":"モバイル機器はリーディング課題の最中に多くのバッテリー電力を消費する。"},
+                {"word":"Satellite","meaning":"衛星、人工衛星","sentence":"The meteorology center receives real-time data from weather satellites.","translation":"気象センターは気象衛星からリアルタイムのデータを受信している。"},
+                {"word":"Interactive","meaning":"双方向の、対話的な","sentence":"The platform offers interactive quizzes to enhance student motivation.","translation":"プラットフォームは、生徒のやる気を高めるために双方向のクイズを提供している。"},
+                {"word":"Broadcast","meaning":"放送する、放映する","sentence":"The debate was broadcast to a global audience online.","translation":"その討論会はオンラインで世界中の聴衆に向けて放送された。"},
+                {"word":"Telecommunications","meaning":"電気通信","sentence":"The telecommunications industry experienced rapid growth last decade.","translation":"電気通信産業はここ10年で急速な成長を経験した。"},
+                {"word":"Cybersecurity","meaning":"サイバーセキュリティ","sentence":"Companies must invest more in cybersecurity to protect customer data.","translation":"顧客データを守るために、企業はサイバーセキュリティにより多く投資しなければならない。"},
+                {"word":"Censorship","meaning":"検閲","sentence":"Press censorship contradicts the basic principles of democracy.","translation":"報道の検閲は、民主主義の基本原則と矛盾する。"},
+                {"word":"Copyright","meaning":"著作権","sentence":"You must obtain permission to use copyright material in your presentation.","translation":"プレゼンテーションで著作権のある素材を使用するには、許可を得なければならない。"},
+                {"word":"Domain","meaning":"ドメイン、分野、領域","sentence":"The university registered a new domain name for its space project.","translation":"大学は宇宙プロジェクトのために新しいドメイン名を登録した。"},
+                {"word":"Subscriber","meaning":"加入者、購読者","sentence":"The online newspaper gained a record number of subscribers.","translation":"そのオンライン新聞は過去最高数の購読者（加入者）を獲得した。"},
+                {"word":"Spam","meaning":"迷惑メール、スパム","sentence":"The security software filters out spam emails automatically.","translation":"そのセキュリティソフトは迷惑メール（スパム）を自動的にフィルタリングする。"},
+                {"word":"Blog","meaning":"ブログ","sentence":"The scientist started a blog to explain biology concepts.","translation":"その科学者は生物学の概念を説明するためにブログを開設した。"},
+                {"word":"Podcast","meaning":"ポッドキャスト","sentence":"Listening to English podcasts is highly recommended for vocabulary study.","translation":"英語のポッドキャストを聴くことは、語彙学習に強く勧められる。"},
+                {"word":"Feed","meaning":"フィード、養う、餌を与える","sentence":"The social platform displays a customized feed based on your interests.","translation":"そのソーシャルプラットフォームは、あなたの興味に基づいたカスタムフィードを表示する。"},
+                {"word":"Forum","meaning":"公開討論の場、フォーラム","sentence":"The website provides an online forum for students to discuss homework.","translation":"そのウェブサイトは、生徒が宿題を議論するためのオンラインフォーラム（掲示板）を提供している。"},
+                {"word":"Server","meaning":"ホストコンピューター","sentence":"The tech team is upgrading the school server to handle more users.","translation":"技術チームは、より多くのユーザーを処理するために学校のサーバーをアップグレードしている。"},
+                {"word":"Cloud","meaning":"クラウド、雲","sentence":"Storing data on the cloud allows you to access it from any device.","translation":"データをクラウドに保存することで、どの機器からでもアクセスできるようになる。"},
+                {"word":"Browser","meaning":"ブラウザ、閲覧ソフト","sentence":"Please use a modern browser to run this vocabulary app smoothly.","translation":"この語彙アプリをスムーズに実行するために、現代的なブラウザを使用してください。"},
+                {"word":"Link","meaning":"リンク、関連、繋ぐ","sentence":"Click the link below to download the study guide.","translation":"学習ガイドをダウンロードするには、以下のリンクをクリックしてください。"},
+                {"word":"Upload","meaning":"アップロードする、送信する","sentence":"Students are required to upload their essay files by Friday night.","translation":"生徒はエッセイのファイルを金曜日の夜までにアップロードすることを求められている。"},
+                {"word":"Download","meaning":"ダウンロードする、受信する","sentence":"You can download the listening files to study offline.","translation":"オフラインで勉強するために、リスニングファイルをダウンロードすることができる。"},
+                {"word":"Cookie","meaning":"クッキー（WEB履歴データ）","sentence":"Websites use cookies to remember your display preferences.","translation":"ウェブサイトは、表示の好みを記憶するためにクッキーを使用する。"},
+                {"word":"Bandwidth","meaning":"通信容量","sentence":"Limited bandwidth can cause delays during interactive video classes.","translation":"通信容量（帯域幅）が限られていると、双方向の動画授業中に遅延が発生することがある。"},
+                {"word":"Firewall","meaning":"ファイヤーウォール、防火壁","sentence":"A strong firewall protects the school network from unauthorized entities.","translation":"強力なファイヤーウォールは、学校のネットワークを権限のない実体（ハッカーなど）から守る。"},
+                {"word":"Malware","meaning":"マルウェア、悪意あるソフト","sentence":"Do not download suspicious files, otherwise you might infect your device with malware.","translation":"不審なファイルをダウンロードしてはいけない。さもなければ機器がマルウェアに感染する可能性がある。"},
+                {"word":"Hacker","meaning":"ハッカー","sentence":"The cybersecurity team successfully blocked the hacker's attempt.","translation":"サイバーセキュリティチームは、ハッカーの試みを阻止することに成功した。"},
+                {"word":"AI","meaning":"人工知能","sentence":"AI technology can evaluate writing tasks in less than ten seconds.","translation":"AI（人工知能）技術は、10秒未満で英作文の課題を評価することができる。"},
+                {"word":"Chatbot","meaning":"チャットボット","sentence":"The website uses a chatbot to respond to customer inquiries.","translation":"そのウェブサイトは、顧客の問い合わせに答えるためにチャットボットを使用している。"},
+                {"word":"Avatar","meaning":"アバター、分身","sentence":"Students can create an avatar to participate in the virtual campus.","translation":"生徒は仮想キャンパスに参加するためにアバターを作成することができる。"},
+                {"word":"Streaming","meaning":"ストリーミング、連続再生","sentence":"The live streaming of the graduation ceremony had many views.","translation":"卒業式のライブストリーミング（生配信）は、多くの視聴数を記録した。"},
+                {"word":"Network","meaning":"通信網","sentence":"A global network connects researchers from diverse fields.","translation":"グローバルな通信網（ネットワーク）が、多様な分野の研究者たちを繋いでいる。"},
+                {"word":"Digital","meaning":"電子的な","sentence":"The digital transition changed how libraries preserve ancient essays.","translation":"電子的な移行（デジタル化）により、図書館が古代のエッセイを保存する方法が変わった。"},
+                {"word":"Virtual","meaning":"実質上の","sentence":"He became a virtual leader of the research group after the principal left.","translation":"校長（責任者）が去った後、彼は研究グループの実質上のリーダーとなった。"},
+                {"word":"Information","meaning":"情報、案内","sentence":"The information desk provides brochures in foreign languages.","translation":"案内所（インフォメーションデスク）は外国語のパンフレットを提供している。"},
+                {"word":"Media","meaning":"媒体","sentence":"Loudspeaker is an effective media to convey warnings during a storm.","translation":"スピーカーは、嵐の間に警告を伝えるための有効な媒体だ。"},
+                {"word":"Communication","meaning":"伝達","sentence":"The communication of ideas is the core function of language.","translation":"意見の伝達は、言語の最も中心的な（核心の）機能だ。"},
+                {"word":"Broadcasting","meaning":"放送","sentence":"The satellite is used for international TV broadcasting.","translation":"その衛星は国際テレビ放送に使用されている。"},
+                {"word":"Journalism","meaning":"報道","sentence":"She plans to study journalism at university to become a reporter.","translation":"彼女はレポーターになるために、大学でジャーナリズム（報道学）を勉強する予定だ。"},
+                {"word":"Advertising","meaning":"宣伝活動","sentence":"Modern marketing relies heavily on social media advertising.","translation":"現代のマーケティングは、ソーシャルメディアでの広告（宣伝活動）に大きく依存している。"},
+                {"word":"Database","meaning":"情報群","sentence":"The program stores all student test scores in a secured database.","translation":"そのプログラムは、保護された情報群（データベース）にすべての生徒の試験スコアを保存する。"},
+                {"word":"Software","meaning":"電子プログラム","sentence":"The software evaluates your English pronunciation in real-time.","translation":"そのプログラム（ソフトウェア）は、あなたの英語の発音をリアルタイムで評価する。"},
+                {"word":"Algorithm","meaning":"論理手順","sentence":"The trading system is fully automated using an advanced algorithm.","translation":"その取引システムは、高度なアルゴリズム（計算手順）を使用して完全に自動化されている。"},
+                {"word":"Privacy","meaning":"個人情報保護","sentence":"The company has strict regulations regarding customer privacy.","translation":"その会社は、顧客のプライバシー（個人情報保護）に関して厳格な規則を設けている。"},
+                {"word":"Internet","meaning":"ネット","sentence":"Online shopping has become easy with high-speed internet access.","translation":"高速インターネットの普及により、オンラインショッピングは非常に簡単になった。"},
+                {"word":"Platform","meaning":"土台、基盤","sentence":"The cloud platform serves as a solid foundation for the database.","translation":"そのクラウドプラットフォームは、データベースのための頑丈な基盤として機能している。"},
+                {"word":"Application","meaning":"適用、出願","sentence":"The deadline for the college scholarship application is Friday.","translation":"大学奨学金の申請（出願）の締め切りは金曜日だ。"},
+                {"word":"Platform","meaning":"乗降場","sentence":"Please stand behind the yellow line on the train platform.","translation":"電車のプラットフォーム（乗降場）の黄色い線の後ろにお下がりください。"},
+                {"word":"Link","meaning":"関連性、絆","sentence":"The study revealed a clear link between smoking and lung illness.","translation":"その研究は、喫煙と肺の疾患との間の明確な関連性（リンク）を明らかにした。"},
+                {"word":"Server","meaning":"配膳係","sentence":"The friendly server recommended the chef's special seafood.","translation":"親切なウェイター（配膳係）は、シェフ特製のシーフードを勧めてくれた。"},
+                {"word":"Cloud","meaning":"暗雲","sentence":"Dark clouds began to gather right before the storm started.","translation":"嵐が始まる直前に、暗雲が立ち込め始めた。"},
+                {"word":"Feed","meaning":"食べ物、餌","sentence":"We bought organic feed for the domestic chickens.","translation":"私たちは飼育している鶏（家禽）のために有機飼料（餌）を買った。"},
+                {"word":"Upload","meaning":"送信","sentence":"The upload of the large video file took more than ten minutes.","translation":"大きな動画ファイルの送信（アップロード）には10分以上かかった。"},
+                {"word":"Download","meaning":"受信","sentence":"The download of the application was completed successfully.","translation":"アプリの受信（ダウンロード）は正常に完了した。"},
+                {"word":"Malware","meaning":"有害ソフト","sentence":"Using non-certified software increases the risk of malware.","translation":"非公認のソフトウェアを使用することは、有害ソフト（マルウェア）のリスクを高める。"},
+                {"word":"Censorship","meaning":"制限","sentence":"Severe censorship limits the diversity of opinions in the nation.","translation":"厳しい検閲（制限）は、国内における意見の多様性を制限している。"},
+                {"word":"Copyright","meaning":"版権","sentence":"The author retains the copyright for all his classical essays.","translation":"著者は、自身のすべての古典的エッセイの著作権（版権）を保有している。"},
+                {"word":"Cookie","meaning":"ブラウザ履歴","sentence":"You can block cookies in the privacy settings of your browser.","translation":"ブラウザのプライバシー設定でクッキー（ブラウザ履歴）をブロックすることができる。"},
+                {"word":"AI","meaning":"人工頭脳","sentence":"Recent advances in AI are changing the structure of industries.","translation":"人工知能（AI）の最近の進歩は、産業の構造を変えつつある。"},
+                {"word":"Blog","meaning":"ネット日記","sentence":"She documents her travel experiences on her personal blog.","translation":"彼女は個人のブログ（ネット日記）に自身の旅行記を記録している。"},
+                {"word":"Interactive","meaning":"対話式","sentence":"The museum features many interactive displays for children.","translation":"その博物館は、子供向けに多くの対話式（体験型）ディスプレイを特徴としている。"},
+                {"word":"Data","meaning":"数値、基礎資料","sentence":"The scientist spent months checking the accuracy of the data.","translation":"その科学者は、データ（数値資料）の正確性を確認することに何ヶ月も費やした。"},
+                {"word":"Platform","meaning":"発言台","sentence":"The conference provided a prominent platform for young researchers.","translation":"その会議は、若い研究者たちに素晴らしい発言の場（プラットフォーム）を提供した。"},
+                {"word":"Security","meaning":"保証","sentence":"Having a stable job provides financial security to the family.","translation":"安定した仕事を持つことは、家族に金銭的な安心（安全保証）をもたらす。"},
+                {"word":"Broadcasting","meaning":"放映中","sentence":"The sports event is currently broadcasting globally.","translation":"そのスポーツイベントは現在、世界中で放映されている。"}
+            ]
+        };
+
+        let currentPackKey = 'pack7';
+        let words = [];
+        let unclearWordMap = {};
+        let playbackMode = 'all';
+        let currentIndex = 0;
+        let isAutoPlay = true;
+        let speechRate = 1.0;
+        let autoPlayInterval = 1500;
+        let currentUtterance = null;
+        let activeTimeout = null;
+        let voices = [];
+        let currentStep = 0;
+        let isPlaying = false;
+        let isPaused = false;
+
+        function loadUnclearData() { try { const data = localStorage.getItem('gt_unclear_p3'); if (data) unclearWordMap = JSON.parse(data); } catch (e) {} }
+        function saveUnclearData() { try { localStorage.setItem('gt_unclear_p3', JSON.stringify(unclearWordMap)); } catch (e) {} }
+        function initVoices() { voices = window.speechSynthesis.getVoices(); if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = () => { voices = window.speechSynthesis.getVoices(); }; }
+        function getVoiceForLang(langCode) { const list = voices.length > 0 ? voices : window.speechSynthesis.getVoices(); let v = list.find(x => x.lang === langCode); return v || list.find(x => x.lang.startsWith(langCode.split('-')[0])); }
+
+        function speak(text, lang, callback) {
+            window.speechSynthesis.cancel();
+            if (activeTimeout) clearTimeout(activeTimeout);
+            if (!text) { if (callback) callback(); return; }
+            setTimeout(() => {
+                const u = new SpeechSynthesisUtterance(text);
+                u.rate = speechRate;
+                const v = getVoiceForLang(lang);
+                if (v) u.voice = v; else u.lang = lang;
+                window.activeUtterance = u;
+                u.onend = () => { window.activeUtterance = null; setTimeout(() => { if (callback) callback(); }, 120); };
+                u.onerror = () => { window.activeUtterance = null; setTimeout(() => { if (callback) callback(); }, 120); };
+                window.speechSynthesis.speak(u);
+            }, 120);
+        }
+
+        function changeLearningPack() {
+            stopSpeaking();
+            currentPackKey = document.getElementById('select-pack').value;
+            words = packs[currentPackKey] ? [...packs[currentPackKey]] : [];
+            currentIndex = 0;
+            playbackMode = 'all';
+            updatePlayerUI();
+            updateModeCounters();
+            if (isAutoPlay && words.length > 0) setTimeout(() => startWordFlow(), 200);
+        }
+
+        function switchTab(tabName) {
+            stopSpeaking();
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('bg-amber-50', 'text-amber-700'); b.classList.add('text-slate-600', 'hover:bg-slate-100'); });
+            const active = document.getElementById(`tab-btn-${tabName}`);
+            active.classList.remove('text-slate-600', 'hover:bg-slate-100'); active.classList.add('bg-amber-50', 'text-amber-700');
+            if (tabName === 'list') renderWordList();
+        }
+
+        function getActiveWords() { return playbackMode === 'unclear' ? words.filter(w => unclearWordMap[w.word] === true) : words; }
+
+        function setPlaybackMode(mode) {
+            stopSpeaking();
+            if (mode === 'unclear' && words.filter(w => unclearWordMap[w.word] === true).length === 0) { alert("わからない登録されている単語がありません。"); return; }
+            playbackMode = mode; currentIndex = 0;
+            const a = document.getElementById('mode-all-btn'), u = document.getElementById('mode-unclear-btn');
+            if (mode === 'all') { a.className = "px-3 py-1 rounded-md text-xs font-semibold bg-white text-amber-600 shadow-sm"; u.className = "px-3 py-1 rounded-md text-xs font-semibold text-slate-600"; }
+            else { a.className = "px-3 py-1 rounded-md text-xs font-semibold text-slate-600"; u.className = "px-3 py-1 rounded-md text-xs font-semibold bg-white text-amber-600 shadow-sm"; }
+            updatePlayerUI(); updateModeCounters();
+            if (isAutoPlay && words.length > 0) startWordFlow();
+        }
+
+        function updateModeCounters() {
+            document.getElementById('count-all-words').innerText = words.length;
+            document.getElementById('count-unclear-words').innerText = words.filter(w => unclearWordMap[w.word] === true).length;
+            document.querySelectorAll('.total-count-badge').forEach(b => b.innerText = words.length);
+        }
+
+        function updatePlayerUI() {
+            if (words.length === 0) return;
+            const active = getActiveWords(), w = active[currentIndex];
+            if (!w) { if (playbackMode === 'unclear') setPlaybackMode('all'); return; }
+            document.getElementById('card-word').innerText = w.word;
+            document.getElementById('card-meaning').innerText = w.meaning;
+            document.getElementById('card-sentence').innerText = w.sentence || "—";
+            document.getElementById('card-translation').innerText = w.translation || "—";
+            document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${active.length}`;
+            document.getElementById('progress-bar').style.width = `${((currentIndex + 1) / active.length) * 100}%`;
+            updateUnclearCardBtn(w.word); resetSectionsVisual();
+        }
+
+        function resetSectionsVisual() { ['section-word', 'section-meaning', 'section-sentence', 'section-translation'].forEach(id => document.getElementById(id).classList.remove('speech-active-section')); }
+        function highlightSection(id) { resetSectionsVisual(); document.getElementById(id).classList.add('speech-active-section'); }
+
+        function updateUnclearCardBtn(word) {
+            const isU = unclearWordMap[word] === true, b = document.getElementById('card-unclear-toggle'), i = document.getElementById('card-unclear-icon'), t = document.getElementById('card-unclear-text');
+            if (isU) { i.className = "fa-solid fa-star text-amber-500"; t.innerText = "わからない登録済"; b.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-semibold shadow-sm"; }
+            else { i.className = "fa-regular fa-star text-slate-400"; t.innerText = "わからない"; b.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-400 text-xs font-semibold shadow-sm"; }
+        }
+
+        function toggleCurrentUnclear() { const active = getActiveWords(), w = active[currentIndex]; if (!w) return; unclearWordMap[w.word] = !unclearWordMap[w.word]; saveUnclearData(); updateUnclearCardBtn(w.word); updateModeCounters(); }
+        function toggleWordUnclear(word) { unclearWordMap[word] = !unclearWordMap[word]; saveUnclearData(); updateModeCounters(); const active = getActiveWords(), w = active[currentIndex]; if (w && w.word === word) updateUnclearCardBtn(word); }
+
+        function speakCurrentPart(part) { stopSpeaking(); const active = getActiveWords(), w = active[currentIndex]; if (!w) return; setTimeout(() => { if (part === 'word') { highlightSection('section-word'); speak(w.word, 'en-US'); } else if (part === 'meaning') { highlightSection('section-meaning'); speak(w.meaning, 'ja-JP'); } else if (part === 'sentence' && w.sentence) { highlightSection('section-sentence'); speak(w.sentence, 'en-US'); } else if (part === 'translation' && w.translation) { highlightSection('section-translation'); speak(w.translation, 'ja-JP'); } }, 100); }
+        function stopSpeaking() { window.speechSynthesis.cancel(); if (activeTimeout) clearTimeout(activeTimeout); isPlaying = false; isPaused = false; currentStep = 0; resetSectionsVisual(); updatePlayButtonUI(); }
+        function pauseSpeaking() { window.speechSynthesis.cancel(); if (activeTimeout) clearTimeout(activeTimeout); isPaused = true; updatePlayButtonUI(); }
+
+        function togglePlayPause() { if (words.length === 0) return; if (!isPlaying) startWordFlow(); else if (isPaused) { isPaused = false; updatePlayButtonUI(); playStep(); } else pauseSpeaking(); }
+
+        function updatePlayButtonUI() {
+            const b = document.getElementById('btn-play-all'); if (!b) return;
+            if (!isPlaying) b.innerHTML = `<i class="fa-solid fa-play"></i><span>再生</span>`;
+            else if (isPaused) b.innerHTML = `<i class="fa-solid fa-play"></i><span>再開</span>`;
+            else b.innerHTML = `<i class="fa-solid fa-pause"></i><span>停止</span>`;
+        }
+
+        function startWordFlow() { if (words.length === 0) return; stopSpeaking(); isPlaying = true; isPaused = false; currentStep = 0; playStep(); }
+
+        function playStep() {
+            if (!isPlaying || isPaused) return; const active = getActiveWords(), w = active[currentIndex]; if (!w) return;
+            let text = "", lang = "", id = "", delay = 1000;
+            switch (currentStep) {
+                case 0: text = w.word; lang = 'en-US'; id = 'section-word'; delay = 800; break;
+                case 1: text = w.meaning; lang = 'ja-JP'; id = 'section-meaning'; delay = w.sentence ? 1000 : autoPlayInterval; break;
+                case 2: text = w.sentence; lang = 'en-US'; id = 'section-sentence'; delay = 800; break;
+                case 3: text = w.translation; lang = 'ja-JP'; id = 'section-translation'; delay = autoPlayInterval; break;
+            }
+            if(!text) {
+                if (currentStep < 3) { currentStep++; playStep(); }
+                else { currentStep = 0; if (isAutoPlay) { nextWord(true); isPlaying = true; playStep(); } else stopSpeaking(); }
+                return;
+            }
+
+            highlightSection(id); updatePlayButtonUI();
+            speak(text, lang, () => {
+                if (!isPlaying || isPaused) return;
+                activeTimeout = setTimeout(() => {
+                    if (currentStep < 3) { currentStep++; playStep(); }
+                    else { currentStep = 0; if (isAutoPlay) { nextWord(true); isPlaying = true; playStep(); } else { stopSpeaking(); } }
+                }, delay);
+            });
+        }
+
+        function toggleAutoPlay() {
+            isAutoPlay = !isAutoPlay; const b = document.getElementById('btn-autoplay'), d = document.getElementById('status-dot'), p = document.getElementById('ping-indicator'), t = document.getElementById('text-autoplay');
+            if (isAutoPlay) { b.className = "px-4 py-1.5 rounded-xl text-sm font-semibold border border-amber-200 bg-amber-50 text-amber-800 flex items-center gap-2"; d.className = "relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500"; p.classList.remove('hidden'); t.innerText = "自動再生 ON"; if(words.length > 0) startWordFlow(); }
+            else { b.className = "px-4 py-1.5 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-700 flex items-center gap-2"; d.className = "relative inline-flex rounded-full h-3.5 w-3.5 bg-slate-300"; p.classList.add('hidden'); t.innerText = "自動再生 OFF"; stopSpeaking(); }
+        }
+
+        function prevWord() { stopSpeaking(); const active = getActiveWords(); if (active.length === 0) return; currentIndex = currentIndex > 0 ? currentIndex - 1 : active.length - 1; updatePlayerUI(); if (isAutoPlay) setTimeout(() => startWordFlow(), 150); }
+        function nextWord(keep = false) { if (!keep) stopSpeaking(); else { window.speechSynthesis.cancel(); if (activeTimeout) clearTimeout(activeTimeout); currentStep = 0; } const active = getActiveWords(); if (active.length === 0) return; currentIndex = currentIndex < active.length - 1 ? currentIndex + 1 : 0; updatePlayerUI(); }
+        function changeRate() { speechRate = parseFloat(document.getElementById('select-rate').value); }
+        function changeInterval() { autoPlayInterval = parseInt(document.getElementById('select-interval').value); }
+
+        function renderWordList() {
+            const tbody = document.getElementById('word-table-body'); tbody.innerHTML = '';
+            if (words.length === 0) return;
+            words.forEach((w, idx) => {
+                const isU = unclearWordMap[w.word] === true, tr = document.createElement('tr');
+                tr.className = `hover:bg-amber-50/40 cursor-pointer ${currentIndex === idx && playbackMode === 'all' ? 'bg-amber-50/70 font-bold' : ''}`;
+                tr.onclick = (e) => { if (e.target.closest('.unclear-checkbox')) return; playbackMode = 'all'; currentIndex = idx; switchTab('player'); updatePlayerUI(); setTimeout(() => startWordFlow(), 150); };
+                tr.innerHTML = `<td class="py-3 px-4 text-center"><input type="checkbox" ${isU?'checked':''} onchange="toggleWordUnclear('${w.word}')" class="unclear-checkbox w-5 h-5 text-amber-600 rounded"></td><td class="py-3 px-4 font-mono text-xs">${idx+1}</td><td class="py-3 px-4 font-bold text-amber-700">${w.word}</td><td class="py-3 px-4">${w.meaning}</td><td class="py-3 px-4 hidden md:table-cell truncate max-w-xs">${w.sentence || ''}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function startApp() {
+            try { const u = new SpeechSynthesisUtterance(''); u.volume = 0; window.speechSynthesis.speak(u); setTimeout(() => window.speechSynthesis.cancel(), 80); } catch(e) {}
+            document.getElementById('start-overlay').style.display = 'none';
+            words = packs[currentPackKey] ? [...packs[currentPackKey]] : [];
+            updatePlayerUI(); updateModeCounters();
+        }
+
+        window.onload = () => { initVoices(); loadUnclearData(); };
+    </script>
+</body>
+</html>

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Word Trainer Part 1 (1-300語)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .logo-font { font-family: 'Comfortaa', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .speech-active-section { border-color: #4f46e5 !important; background-color: rgba(79, 70, 229, 0.05) !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08); transform: scale(1.01); }
+        button, select { min-height: 46px; }
+        #start-overlay { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.5rem; padding: 2rem; }
+        #start-btn { background: white; color: #4f46e5; font-weight: 700; font-size: 1.15rem; padding: 1.1rem 3rem; border-radius: 1rem; box-shadow: 0 8px 32px rgba(0,0,0,0.25); border: none; cursor: pointer; min-height: 60px; transition: transform 0.1s; }
+        #start-btn:active { transform: scale(0.96); }
+    </style>
+</head>
+<body class="min-height-screen flex flex-col justify-between text-slate-800">
+
+    <div id="start-overlay">
+        <div style="text-align:center;">
+            <div style="width:88px;height:88px;background:rgba(255,255,255,0.2);border-radius:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;box-shadow:0 8px 32px rgba(0,0,0,0.15);">
+                <i class="fa-solid fa-graduation-cap" style="font-size:2.5rem;color:white;"></i>
+            </div>
+            <h1 class="logo-font" style="font-size:2rem;font-weight:700;color:white;margin-bottom:0.3rem;">Word Trainer</h1>
+            <p style="color:rgba(199,210,254,1);font-size:0.9rem;">Part 1: 共通テスト必須 No.1〜3</p>
+        </div>
+        <button id="start-btn" onclick="startApp()"><i class="fa-solid fa-play" style="margin-right:0.6rem;"></i>タップして開始</button>
+    </div>
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col lg:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-md"><i class="fa-solid fa-graduation-cap text-xl"></i></div>
+                <div><h1 class="text-lg font-bold text-slate-900 logo-font">Gemini Word Trainer</h1><p class="text-[10px] text-slate-500 font-semibold">Part 1 (No.1〜3 収録)</p></div>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-full lg:w-auto">
+                <span class="text-xs font-bold text-slate-500 px-2 hidden sm:inline">教材:</span>
+                <select id="select-pack" onchange="changeLearningPack()" class="bg-white border-0 text-slate-800 font-bold text-sm py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm w-full lg:w-auto">
+                    <option value="pack1" selected>No.1 ベーシック必須 100語</option>
+                    <option value="pack2">No.2 対話・意見交換 100語</option>
+                    <option value="pack3">No.3 図表・データ分析 100語</option>
+                </select>
+            </div>
+            <div class="flex gap-2 w-full lg:w-auto justify-end">
+                <button onclick="switchTab('player')" id="tab-btn-player" class="tab-btn flex-1 lg:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition bg-indigo-50 text-indigo-700"><i class="fa-solid fa-play mr-1.5"></i>プレーヤー</button>
+                <button onclick="switchTab('list')" id="tab-btn-list" class="tab-btn flex-1 lg:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-list mr-1.5"></i>一覧 (<span class="total-count-badge">0</span>)</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl w-full mx-auto p-4 flex flex-col justify-center">
+        <!-- プレーヤータブ -->
+        <div id="tab-player" class="tab-content block space-y-6">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex flex-col sm:flex-row justify-between gap-3 pb-2 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <div class="inline-flex rounded-lg p-1 bg-slate-100">
+                            <button id="mode-all-btn" onclick="setPlaybackMode('all')" class="px-3 py-1 rounded-md text-xs font-semibold bg-white text-indigo-600 shadow-sm">全単語 (<span id="count-all-words">0</span>)</button>
+                            <button id="mode-unclear-btn" onclick="setPlaybackMode('unclear')" class="px-3 py-1 rounded-md text-xs font-semibold text-slate-600">わからない (<span id="count-unclear-words">0</span>)</button>
+                        </div>
+                    </div>
+                    <span id="progress-text" class="text-sm font-bold text-slate-700">0 / 0</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden"><div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+            </div>
+
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-md p-6 sm:p-10 relative overflow-hidden min-h-[440px] flex flex-col justify-between">
+                <div class="absolute top-4 right-4 z-20">
+                    <button id="card-unclear-toggle" onclick="toggleCurrentUnclear()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-400 font-semibold text-xs shadow-sm"><i class="fa-regular fa-star text-sm" id="card-unclear-icon"></i><span id="card-unclear-text">わからない</span></button>
+                </div>
+
+                <div class="space-y-3.5 z-10 mt-6" id="card-content-area">
+                    <div id="section-word" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50">
+                        <div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2.5 py-0.5 rounded-full">Step 1: Word</span><button onclick="speakCurrentPart('word')" class="text-indigo-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div>
+                        <h2 id="card-word" class="text-3xl sm:text-4xl font-extrabold text-slate-950">Loading...</h2>
+                    </div>
+                    <div id="section-meaning" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50">
+                        <div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2.5 py-0.5 rounded-full">Step 2: Meaning</span><button onclick="speakCurrentPart('meaning')" class="text-rose-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div>
+                        <p id="card-meaning" class="text-lg sm:text-xl font-bold text-slate-850">—</p>
+                    </div>
+                    <div id="section-sentence" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50">
+                        <div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-teal-500 bg-teal-50 px-2.5 py-0.5 rounded-full">Step 3: Example</span><button onclick="speakCurrentPart('sentence')" class="text-teal-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div>
+                        <p id="card-sentence" class="text-base sm:text-lg font-medium text-slate-700 italic">—</p>
+                    </div>
+                    <div id="section-translation" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50">
+                        <div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-2.5 py-0.5 rounded-full">Step 4: Translation</span><button onclick="speakCurrentPart('translation')" class="text-amber-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div>
+                        <p id="card-translation" class="text-sm sm:text-base font-normal text-slate-600">—</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 pt-6 border-t border-slate-100 z-10">
+                    <div class="flex items-center gap-3">
+                        <button id="btn-autoplay" onclick="toggleAutoPlay()" class="px-4 py-1.5 rounded-xl text-sm font-semibold border border-emerald-200 bg-emerald-50 text-emerald-800 shadow-sm flex items-center gap-2"><span class="relative flex h-3.5 w-3.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" id="ping-indicator"></span><span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500" id="status-dot"></span></span><span id="text-autoplay">自動再生 ON</span></button>
+                        <select id="select-interval" onchange="changeInterval()" class="bg-transparent border-b border-slate-300 text-slate-600 text-xs py-0.5"><option value="1500" selected>短め</option><option value="2500">普通</option><option value="4000">長め</option></select>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="prevWord()" class="w-12 h-12 rounded-full border border-slate-200 bg-white flex justify-center items-center shadow-sm"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button id="btn-play-all" onclick="togglePlayPause()" class="px-8 h-12 rounded-full bg-indigo-600 text-white font-bold shadow-md flex items-center gap-2"><i class="fa-solid fa-play"></i><span id="text-play-all">再生</span></button>
+                        <button onclick="nextWord()" class="w-12 h-12 rounded-full border border-slate-200 bg-white flex justify-center items-center shadow-sm"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <select id="select-rate" onchange="changeRate()" class="bg-transparent border-b border-slate-300 text-slate-600 text-xs py-0.5"><option value="0.8">0.8x</option><option value="1.0" selected>1.0x</option><option value="1.2">1.2x</option></select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 一覧タブ -->
+        <div id="tab-list" class="tab-content hidden space-y-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto max-h-[500px]">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500"><th class="py-3 px-4 w-16 text-center">マーク</th><th class="py-3 px-4 w-16">No.</th><th class="py-3 px-4">英単語</th><th class="py-3 px-4">意味</th><th class="py-3 px-4 hidden md:table-cell">例文</th></tr></thead>
+                        <tbody id="word-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const packs = {
+            pack1: [
+                {"word":"Alternative","meaning":"代わりの、選択肢","sentence":"Is there an alternative way to solve this science problem?","translation":"この科学の問題を解決するための代替手段はありますか？"},
+                {"word":"Consequence","meaning":"結果、影響","sentence":"You should consider the potential consequences of your action.","translation":"自分の行動がもたらす可能性のある結果を考慮すべきです。"},
+                {"word":"Significant","meaning":"重要な、著しい","sentence":"There has been a significant increase in online communication.","translation":"オンラインコミュニケーションは著しく増加しています。"},
+                {"word":"Persuade","meaning":"説得する","sentence":"It is difficult to persuade people to change their eating habits.","translation":"人々に食習慣を変えるよう説得するのは困難です。"},
+                {"word":"Appreciate","meaning":"感謝する、正しく理解する","sentence":"I really appreciate your kind help during the exams.","translation":"試験中のあなたの親切な援助に本当に感謝しています。"},
+                {"word":"Benefit","meaning":"恩恵、利益","sentence":"A good sleep has many physical and mental benefits.","translation":"質の良い睡眠は身体的および精神的に多くの恩恵をもたらします。"},
+                {"word":"Contribute","meaning":"貢献する、寄付する","sentence":"Everyone should contribute to protecting the local environment.","translation":"誰もが地域の環境保護に貢献すべきです。"},
+                {"word":"Distinguish","meaning":"区別する、聞き分ける","sentence":"Young children can distinguish between right and wrong easily.","translation":"幼い子供でも正しいことと悪いことを容易に区別できます。"},
+                {"word":"Emphasize","meaning":"強調する","sentence":"My teacher always emphasizes the importance of daily review.","translation":"先生はいつも毎日の復習の大切さを強調します。"},
+                {"word":"Financial","meaning":"財政上の、金銭的な","sentence":"The government provided financial support to local libraries.","translation":"政府は地域の図書館に財政的支援を提供しました。"},
+                {"word":"Guarantee","meaning":"保証する","sentence":"Hard work alone does not always guarantee high scores.","translation":"努力だけが常に高い点数を保証するとは限りません。"},
+                {"word":"Inevitable","meaning":"避けられない、必然的な","sentence":"With the rise of internet technology, changes were inevitable.","translation":"インターネット技術の台頭により、変化は避けられないものでした。"},
+                {"word":"Observe","meaning":"観察する、気づく、規則を守る","sentence":"Students are asked to observe the behavior of the birds.","translation":"生徒たちは鳥の行動を観察するように求められています。"},
+                {"word":"Predict","meaning":"予測する、予言する","sentence":"It is hard to predict the weather of next week accurately.","translation":"来週の天気を正確に予測することは困難です。"},
+                {"word":"Recommend","meaning":"推薦する、勧める","sentence":"I highly recommend reading this essay for your class project.","translation":"クラスのプロジェクトのために、このエッセイを読むことを強くお勧めします。"},
+                {"word":"Sufficient","meaning":"十分な、足りる","sentence":"Did you have sufficient time to finish the English reading task?","translation":"英語のリーディング課題を終わらせるのに十分な時間がありましたか？"},
+                {"word":"Vulnerable","meaning":"傷つきやすい、脆弱な","sentence":"The small island is highly vulnerable to climate change.","translation":"その小さな島は気候変動の影響を非常に受けやすいです。"},
+                {"word":"Withdraw","meaning":"引き出す、退く、撤回する","sentence":"The team had to withdraw from the national tournament.","translation":"チームは全国大会から撤退せざるを得ませんでした。"},
+                {"word":"Exaggerate","meaning":"誇張する、大げさに言う","sentence":"Don't exaggerate the difficulty of the university exam.","translation":"大学入試の難しさを大げさに言わないでください。"},
+                {"word":"Abandon","meaning":"捨てる、断念する","sentence":"We had to abandon our picnic plan because of the heavy storm.","translation":"激しい嵐のためにピクニックの計画を断念せざるを得ませんでした。"},
+                {"word":"Acquire","meaning":"獲得する、習得する","sentence":"She managed to acquire excellent communication skills in college.","translation":"彼女は大学で優れたコミュニケーション能力を習得しました。"},
+                {"word":"Advocate","meaning":"主張する、支持する","sentence":"Some doctors advocate eating more green vegetables daily.","translation":"一部の医師は、毎日もっと緑色野菜を食べることを推奨しています。"},
+                {"word":"Ambiguous","meaning":"曖昧な、不明瞭な","sentence":"The ending of the novel was ambiguous and left readers thinking.","translation":"その小説の結末は曖昧で、読者に考えさせました。"},
+                {"word":"Analyze","meaning":"分析する","sentence":"We need to analyze the data carefully before making a conclusion.","translation":"結論を出す前に、データを注意深く分析する必要があります。"},
+                {"word":"Annual","meaning":"年に一度の、毎年の","sentence":"The school's annual festival is held every October.","translation":"学校の恒例の学園祭は毎年10月に開催されます。"},
+                {"word":"Apparent","meaning":"明らかな、一見〜のような","sentence":"It became apparent that the system had some major errors.","translation":"システムにいくつかの重大なエラーがあることが明らかになりました。"},
+                {"word":"Approach","meaning":"アプローチ、接近する","sentence":"We should try a different approach to solve this dilemma.","translation":"このジレンマを解決するために、別のアプローチを試すべきです。"},
+                {"word":"Artificial","meaning":"人工的な、模造の","sentence":"The lake in the park is completely artificial.","translation":"公園の中の湖は完全に人工のものです。"},
+                {"word":"Aspect","meaning":"側面、様様","sentence":"Language learning involves many different aspects of culture.","translation":"語学学習には、文化の様々な側面が含まれます。"},
+                {"word":"Assume","meaning":"仮定する、思い込む","sentence":"Do not assume that everyone agrees with your opinion.","translation":"誰もがあなたの意見に同意すると仮定してはいけません。"},
+                {"word":"Attitude","meaning":"態度、考え方","sentence":"A positive attitude is key to overcoming difficult situations.","translation":"前向きな態度は困難な状況を乗り越える鍵です。"},
+                {"word":"Attribute","meaning":"〜のせいにする、属性","sentence":"She attributes her success to her family's endless support.","translation":"彼女は自分の成功を家族の絶え間ない支えのおかげだとしています。"},
+                {"word":"Brief","meaning":"簡潔な、短い","sentence":"The guide gave us a brief explanation of the museum.","translation":"ガイドは博物館について簡潔な説明をしてくれました。"},
+                {"word":"Capacity","meaning":"能力、収容力","sentence":"Humans have an amazing capacity to adapt to new environments.","translation":"人間には新しい環境に適応する素晴らしい能力があります。"},
+                {"word":"Challenge","meaning":"課題、試練、挑む","sentence":"Starting a new career is always a great challenge.","translation":"新しいキャリアを始めることは常に大きな挑戦です。"},
+                {"word":"Circumstance","meaning":"状況、環境","sentence":"Under no circumstances should you open this security door.","translation":"いかなる状況があっても、このセキュリティドアを開けてはいけません。"},
+                {"word":"Clarify","meaning":"明確にする","sentence":"Could you please clarify your answer for the third question?","translation":"3番目の質問の回答を明確にしていただけますか？"},
+                {"word":"Coherent","meaning":"一貫した、筋の通った","sentence":"He failed to give a coherent explanation for his absence.","translation":"彼は欠席に対する一貫した説明をすることができませんでした。"},
+                {"word":"Collaborate","meaning":"協力する、共同で行う","sentence":"Researchers from Japan and the US decided to collaborate.","translation":"日本とアメリカの研究者が共同研究することを決定しました。"},
+                {"word":"Collapse","meaning":"崩壊する、倒れる","sentence":"The old bridge collapsed after the heavy weekend rain.","translation":"週末の豪雨の後、古い橋が崩壊しました。"},
+                {"word":"Commit","meaning":"尽くす、委ねる、犯す","sentence":"You must commit yourself entirely to your studies to pass.","translation":"合格するためには、勉強に全力を注ぐ必要があります。"},
+                {"word":"Compensate","meaning":"補償する、埋め合わせる","sentence":"Our hard work will compensate for our lack of experience.","translation":"私たちの懸命な努力が、経験不足を補ってくれるでしょう。"},
+                {"word":"Complex","meaning":"複雑な、複合体","sentence":"The brain is a complex organ that scientists still study.","translation":"脳は科学者が今なお研究している複雑な器官です。"},
+                {"word":"Comply","meaning":"従う、規則を守る","sentence":"All passengers must comply with safety regulations.","translation":"すべての乗客は安全規則に従わなければなりません。"},
+                {"word":"Component","meaning":"構成要素、部品","sentence":"Listening is a crucial component of language learning.","translation":"リスニングは言語学習の極めて重要な構成要素です。"},
+                {"word":"Compromise","meaning":"妥協、妥協する","sentence":"After a long discussion, they reached a sensible compromise.","translation":"長い議論の末、彼らは確かな妥協点に達しました。"},
+                {"word":"Concentrate","meaning":"集中する","sentence":"It is hard to concentrate on reading in a noisy room.","translation":"騒がしい部屋の中で読書に集中するのは難しいです。"},
+                {"word":"Concept","meaning":"概念、考え方","sentence":"The concept of time travel has inspired many movies.","translation":"タイムトラベルの概念は多くの映画にインスピレーションを与えてきました。"},
+                {"word":"Conclude","meaning":"結論づける、終える","sentence":"The researcher concluded that the experiment was successful.","translation":"研究者はその実験が成功したと結論づけました。"},
+                {"word":"Conduct","meaning":"行う、行動","sentence":"We are going to conduct a survey about study habits.","translation":"私たちは学習習慣に関する調査を行う予定です。"},
+                {"word":"Confirm","meaning":"確認する、裏付ける","sentence":"Please call the hotel to confirm your room reservation.","translation":"ホテルの予約を確認するために、電話をかけてください。"},
+                {"word":"Conflict","meaning":"対立、葛藤","sentence":"There was a conflict between his duties and his desires.","translation":"彼の義務と個人的な欲望の間で葛藤がありました。"},
+                {"word":"Consent","meaning":"同意、承諾","sentence":"You cannot post photos of others without their consent.","translation":"他人の同意なしに写真を投稿することはできません。"},
+                {"word":"Considerable","meaning":"かなりの、相当な","sentence":"The construction project cost a considerable amount of money.","translation":"その建設プロジェクトにはかなりの額の費用がかかりました。"},
+                {"word":"Constant","meaning":"絶え間ない、一定の","sentence":"He is in constant contact with his classmates online.","translation":"彼はオンラインでクラスメイトと常に連絡を取り合っています。"},
+                {"word":"Constrain","meaning":"制限する、束縛する","sentence":"We are constrained by a very tight budget for this trip.","translation":"私たちはこの旅行に関して非常に厳しい予算に制限されています。"},
+                {"word":"Consult","meaning":"相談する、調べる","sentence":"You should consult a dictionary if you don't know the word.","translation":"その単語を知らない場合は、辞書を引くべきです。"},
+                {"word":"Consume","meaning":"消費する、食べる","sentence":"Smartphones consume a lot of battery during video playback.","translation":"スマートフォンは動画再生中に多くのバッテリーを消費します。"},
+                {"word":"Contradict","meaning":"矛盾する、反論する","sentence":"Her behavior often contradicts her words.","translation":"彼女の行動はしばしば言葉と矛盾します。"},
+                {"word":"Contrast","meaning":"対照、対比する","sentence":"The quiet countryside stands in sharp contrast to the busy city.","translation":"静かな田舎は忙しい都会と鮮明な対照をなしています。"},
+                {"word":"Convert","meaning":"変換する、変える","sentence":"The machine can convert solar energy into electricity.","translation":"その機械は太陽エネルギーを電気に変換することができます。"},
+                {"word":"Core","meaning":"核心、芯、中心的な","sentence":"Improving vocabulary is the core part of learning English.","translation":"語彙力を伸ばすことは、英語学習の中心的な部分です。"},
+                {"word":"Decline","meaning":"減少する、辞退する","sentence":"The population of some rural towns continues to decline.","translation":"いくつかの地方都市の人口は減少を続けています。"},
+                {"word":"Deficit","meaning":"赤字、不足","sentence":"The library is facing a severe deficit in its annual budget.","translation":"その図書館は年間予算において深刻な不足に直面しています。"},
+                {"word":"Define","meaning":"定義する、明確にする","sentence":"It is difficult to define the exact meaning of happiness.","translation":"幸せの正確な意味を定義することは難しいです。"},
+                {"word":"Deliberate","meaning":"意図的な、慎重な","sentence":"I believe that her mistake was deliberate, not accidental.","translation":"彼女のミスは偶然ではなく、意図的なものだったと信じています。"},
+                {"word":"Demonstrate","meaning":"実演する、証明する","sentence":"The teacher will demonstrate how to use the microscope.","translation":"先生が顕微鏡の使い方を実演して見せてくれます。"},
+                {"word":"Deny","meaning":"否定する、拒む","sentence":"The student did not deny that he had cheated on the exam.","translation":"その生徒は試験でカンニングをしたことを否定しませんでした。"},
+                {"word":"Depart","meaning":"出発する、外れる","sentence":"The train is scheduled to depart at exactly ten o'clock.","translation":"電車はちょうど10時に出発する予定です。"},
+                {"word":"Deprive","meaning":"奪う","sentence":"Too much screen time can deprive children of good sleep.","translation":"画面を見る時間が長すぎると、子供から質の良い睡眠を奪うことになります。"},
+                {"word":"Derive","meaning":"由来する、引き出す","sentence":"Many English words are derived from ancient Latin.","translation":"多くの英単語は古代ラテン語に由来しています。"},
+                {"word":"Desperate","meaning":"必死の、絶望的な","sentence":"The lost climbers made a desperate attempt to find shelter.","translation":"迷子になった登山者たちは、避難場所を見つけようと必死の試みを行いました。"},
+                {"word":"Detect","meaning":"検出する、見つける","sentence":"The test can detect the virus in less than ten minutes.","translation":"その検査は10分未満でウイルスを検出することができます。"},
+                {"word":"Deviate","meaning":"それる、逸脱する","sentence":"We must not deviate from our safety guidelines.","translation":"私たちは安全ガイドラインから逸脱してはなりません。"},
+                {"word":"Device","meaning":"装置、機器","sentence":"A tablet is a useful device for researching information.","translation":"タブレットは情報を調べるのに便利な機器です。"},
+                {"word":"Devote","meaning":"捧げる、専念する","sentence":"He decided to devote his life to helping the poor.","translation":"彼は貧しい人々を助けることに人生を捧げる決意をしました。"},
+                {"word":"Dilemma","meaning":"ジレンマ、板挟み","sentence":"She faced a dilemma of whether to study abroad or work.","translation":"彼女は留学するか働くかのジレンマに直面しました。"},
+                {"word":"Diminish","meaning":"減少する、弱まる","sentence":"The sound of the music slowly diminished as we walked away.","translation":"私たちが立ち去るにつれて、音楽の音は徐々に弱まりました。"},
+                {"word":"Discard","meaning":"捨てる、廃棄する","sentence":"Please discard your plastic bottles in the recycling bin.","translation":"プラスチックボトルはリサイクルボックスに捨ててください。"},
+                {"word":"Dispute","meaning":"論争、異議を唱える","sentence":"The border dispute between the countries was finally settled.","translation":"国境を巡る両国の論争はようやく解決されました。"},
+                {"word":"Diverse","meaning":"多様な、異なる","sentence":"The city has a diverse population from all over the world.","translation":"その都市には、世界中からの多様な人々が暮らしています。"},
+                {"word":"Domestic","meaning":"国内の、家庭の","sentence":"Our airport has separate terminals for domestic flights.","translation":"私たちの空港には国内線用の独立したターミナルがあります。"},
+                {"word":"Dominant","meaning":"支配的な、有力な","sentence":"English is the dominant language in international business.","translation":"英語は国際的なビジネスにおける支配的な言語です。"},
+                {"word":"Drastic","meaning":"劇的な、徹底的な","sentence":"We need to make a drastic change in our energy consumption.","translation":"私たちはエネルギー消費において劇的な変化を起こす必要があります。"},
+                {"word":"Duration","meaning":"持続期間、長さ","sentence":"The duration of the English exam is exactly eighty minutes.","translation":"英語の試験時間はちょうど80分間です。"},
+                {"word":"Echo","meaning":"響く、反響する","sentence":"Her footsteps echoed loudly down the empty school hallway.","translation":"誰もいない学校の廊下に彼女の足音が大きく響き渡りました。"},
+                {"word":"Elaborate","meaning":"凝った、詳細に述べる","sentence":"The museum had an elaborate model of the medieval city.","translation":"博物館には、中世の都市の精巧な模型が展示されていました。"},
+                {"word":"Eliminate","meaning":"排除する、除去する","sentence":"Regular exercise can help eliminate stress from daily life.","translation":"定期的な運動は、日常生活からストレスを排除するのに役立ちます。"},
+                {"word":"Emerge","meaning":"現れる、明らかになる","sentence":"New problems began to emerge after the policy change.","translation":"政策変更の後、新しい問題が現れ始めました。"},
+                {"word":"Encounter","meaning":"遭遇する、出会い","sentence":"Travelers may encounter unexpected troubles on their journey.","translation":"旅行者は旅の途中で予期せぬトラブルに遭遇することがあります。"},
+                {"word":"Enhance","meaning":"高める、向上させる","sentence":"Adding illustrations can enhance the clarity of the textbook.","translation":"イラストを加えることで、教科書のわかりやすさを向上させることができます。"},
+                {"word":"Enormous","meaning":"莫大な、巨大な","sentence":"An enormous amount of energy is required to run the factory.","translation":"工場を稼働させるには莫大な量のエネルギーが必要です。"},
+                {"word":"Ensure","meaning":"確実にする、保証する","sentence":"Please check your answers to ensure there are no mistakes.","translation":"間違いがないことを確実にするために、回答を確認してください。"},
+                {"word":"Entity","meaning":"実体、独立した存在","sentence":"The online school is a completely separate entity from the college.","translation":"そのオンラインスクールは、大学とは完全に独立した存在です。"},
+                {"word":"Equivalents","meaning":"同等のもの、相当する価値","sentence":"Ten dollars is equivalent to about fifteen hundred yen today.","translation":"現在、10ドルは約1500円に相当します。"},
+                {"word":"Establish","meaning":"設立する、確立する","sentence":"The government plans to establish a new research center.","translation":"政府は新しい研究センターを設立することを計画しています。"},
+                {"word":"Estimate","meaning":"推定する、見積もり","sentence":"Experts estimate that the global population will keep rising.","translation":"専門家は、世界の人口が上昇し続けると推定しています。"},
+                {"word":"Evaluate","meaning":"評価する、数値化する","sentence":"The project will be evaluated based on its final results.","translation":"そのプロジェクトは最終成果に基づいて評価されます。"},
+                {"word":"Evolution","meaning":"進化、発展","sentence":"The evolution of cell phones changed how we share ideas.","translation":"携帯電話の進化は、私たちの意見共有の方法を変えました。"},
+                {"word":"Exceed","meaning":"超える、上回る","sentence":"The success of the festival exceeded all our expectations.","translation":"学園祭の成功は、私たちのすべての期待を上回りました。"}
+            ],
+            pack2: [
+                {"word":"Acknowledge","meaning":"認める、同意する","sentence":"I acknowledge your point, but we must look at the overall cost.","translation":"あなたの主張は認めますが、全体のコストに目を向ける必要があります。"},
+                {"word":"Clarify","meaning":"明確にする、説明する","sentence":"Could you clarify what you mean by 'interactive sessions'?","translation":"「インタラクティブ・セッション」とはどういう意味か、明確にしていただけますか？"},
+                {"word":"Contradict","meaning":"矛盾する、反論する","sentence":"Her latest argument completely contradicts her previous statement.","translation":"彼女の最新の主張は、前の発言と完全に矛盾しています。"},
+                {"word":"Persuade","meaning":"説得する","sentence":"He tried hard to persuade his friends to join the drama club.","translation":"彼は友人に演劇部に入るよう熱心に説得しました。"},
+                {"word":"Compromise","meaning":"妥協、妥協する","sentence":"To reach an agreement, both sides had to make a compromise.","translation":"合意に達するために、双方が妥協をしなければなりませんでした。"},
+                {"word":"Advocate","meaning":"主張する、強く支持する","sentence":"She advocates for equal learning opportunities for all students.","translation":"彼女はすべての生徒に平等な学習機会を与えることを主張しています。"},
+                {"word":"Dispute","meaning":"論争、異議を唱える","sentence":"The candidates had a long dispute over the taxation plan.","translation":"候補者たちは課税計画を巡って長い論争を繰り広げました。"},
+                {"word":"Address","meaning":"取り組む、対処する","sentence":"We must address the student's concerns about the new curriculum.","translation":"新しいカリキュラムに関する生徒の懸念に、私たちは対処しなければなりません。"},
+                {"word":"Assert","meaning":"断言する、強く主張する","sentence":"The speaker asserted that technology is improving classroom efficiency.","translation":"講師はテクノロジーが教室の効率を高めていると強く主張しました。"},
+                {"word":"Illustrate","meaning":"説明する、例証する","sentence":"Let me give you an example to illustrate my main opinion.","translation":"私の主な意見を説明するために、一つの例を挙げさせてください。"},
+                {"word":"Object","meaning":"反対する、異議を唱える","sentence":"Many parents objected to the change in school hours.","translation":"多くの保護者が登下校時間の変更に反対しました。"},
+                {"word":"Approve","meaning":"賛成する、承認する","sentence":"The committee approved the budget for the cultural exchange.","translation":"委員会は文化交流の予算を承認しました。"},
+                {"word":"Emphasize","meaning":"強調する","sentence":"The professor emphasized that regular attendance is critical.","translation":"教授は定期的な出席が極めて重要であると強調しました。"},
+                {"word":"Interpret","meaning":"解釈する、通訳する","sentence":"How do you interpret the speaker's last comment?","translation":"話し手の最後の発言をどのように解釈しますか？"},
+                {"word":"Propose","meaning":"提案する","sentence":"He proposed that we divide the task into three parts.","translation":"彼は私たちがタスクを3つに分割することを提案しました。"},
+                {"word":"Recommend","meaning":"勧める、推薦する","sentence":"Which dictionary do you recommend for advanced learners?","translation":"上級学習者にはどの辞書を勧めますか？"},
+                {"word":"Concede","meaning":"認める、譲歩する","sentence":"Eventually, he conceded that his theory was slightly outdated.","translation":"最終的に、彼は自分の理論が少し時代遅れであることを認めました。"},
+                {"word":"Determine","meaning":"決定する、特定する","sentence":"The goal is to determine the best method of communication.","translation":"目標は、最適なコミュニケーション方法を特定することです。"},
+                {"word":"React","meaning":"反応する","sentence":"How did the audience react to the controversial topic?","translation":"聴衆はその議論を呼ぶテーマにどのように反応しましたか？"},
+                {"word":"Defend","meaning":"擁護する、守る","sentence":"She defended her thesis with strong scientific arguments.","translation":"彼女は強力な科学的主張を用いて自分の論文を擁護しました。"},
+                {"word":"Refute","meaning":"反論する、誤りを証明する","sentence":"The student managed to refute the professor's criticism.","translation":"生徒は教授の批判に見事に反論しました。"},
+                {"word":"Conclude","meaning":"結論づける","sentence":"From the discussion, we can conclude that teamwork is essential.","translation":"議論から、チームワークが不可欠であると結論づけることができます。"},
+                {"word":"Suggest","meaning":"提案する、暗示する","sentence":"The test results suggest that more practice is required.","translation":"テスト結果は、より多くの練習が必要であることを示唆しています。"},
+                {"word":"Debate","meaning":"討議する、討論する","sentence":"The class spent the afternoon debating the ethical issue.","translation":"クラスは倫理的な問題について話し合うことに午後を費やしました。"},
+                {"word":"Summarize","meaning":"要約する","sentence":"Could you please summarize the main points of your presentation?","translation":"プレゼンテーションの要点を要約していただけますか？"},
+                {"word":"Confirm","meaning":"確認する","sentence":"I called to confirm if you received my email request.","translation":"メールの依頼が届いているか確認するために電話しました。"},
+                {"word":"Inquire","meaning":"尋ねる、問い合わせる","sentence":"She wrote a letter to inquire about the scholarship details.","translation":"彼女は奨学金の詳細について尋ねるために手紙を書きました。"},
+                {"word":"Consult","meaning":"相談する、意見を求める","sentence":"You should consult with your advisor before changing majors.","translation":"専攻を変える前に、指導教員に相談するべきです。"},
+                {"word":"Resolve","meaning":"解決する、決意する","sentence":"The conflict was resolved after a peaceful conversation.","translation":"平和的な対話の末、対立は解決されました。"},
+                {"word":"Convince","meaning":"納得させる、確信させる","sentence":"It took a long time to convince him of the security risk.","translation":"彼にセキュリティリスクを納得させるには長い時間がかかりました。"},
+                {"word":"Disclose","meaning":"明らかにする、公表する","sentence":"The researcher refused to disclose the names of the subjects.","translation":"研究者は被験者の名前を公表することを拒否しました。"},
+                {"word":"Negotiate","meaning":"交渉する","sentence":"They managed to negotiate a lower price for the textbook.","translation":"彼らは交渉して教科書をより安い価格に下げることができました。"},
+                {"word":"Respond","meaning":"返答する、反応する","sentence":"Please respond to the invitation by the end of the week.","translation":"今週末までに招待への返答をお願いします。"},
+                {"word":"Justify","meaning":"正当化する、理由を証明する","sentence":"How can you justify spending so much money on video games?","translation":"テレビゲームにそんなに多くのお金を使うことをどう正当化するのですか？"},
+                {"word":"Identify","meaning":"特定する、識別する","sentence":"The program helps students identify their own strengths.","translation":"このプログラムは、生徒たちが自分自身の強みを特定するのに役立ちます。"},
+                {"word":"Demonstrate","meaning":"論証する、説明する","sentence":"The project is designed to demonstrate our scientific knowledge.","translation":"このプロジェクトは、私たちの科学的知識を証明するために設計されています。"},
+                {"word":"Verify","meaning":"実証する、確かめる","sentence":"We must verify the facts before publishing the article.","translation":"私たちは記事を公開する前に、事実を確認しなければなりません。"},
+                {"word":"Ignore","meaning":"無視する、黙殺する","sentence":"You should not ignore the advice of experienced mentors.","translation":"経験豊富な指導者のアドバイスを無視するべきではありません。"},
+                {"word":"Admit","meaning":"認める、入場を許可する","sentence":"The boy finally admitted that he had lost the key.","translation":"少年はついに鍵を失くしたことを認めました。"},
+                {"word":"Evaluate","meaning":"評価する、審査する","sentence":"The performance will be evaluated by three independent judges.","translation":"パフォーマンスは3人の独立した審査員によって評価されます。"},
+                {"word":"Analyze","meaning":"分析する","sentence":"Our task is to analyze the feedback from the survey.","translation":"私たちのタスクは、アンケートからのフィードバックを分析することです。"},
+                {"word":"Appreciate","meaning":"良さがわかる、鑑賞する","sentence":"Studying literature helps students appreciate historical cultures.","translation":"文学を学ぶことは、生徒たちが歴史的な文化を正しく理解するのに役立ちます。"},
+                {"word":"Criticize","meaning":"批判する、非難する","sentence":"Instead of criticizing, we should offer helpful solutions.","translation":"批判する代わりに、役に立つ解決策を提案すべきです。"},
+                {"word":"Assure","meaning":"保証する、確信させる","sentence":"I can assure you that all the files are perfectly safe.","translation":"すべてのファイルは完全に安全であることを保証します。"},
+                {"word":"Comment","meaning":"コメント、意見を述べる","sentence":"She declined to comment on the ongoing student debate.","translation":"彼女は進行中の生徒ディベートに関するコメントを拒否しました。"},
+                {"word":"Contrast","meaning":"対比する、対象を示す","sentence":"Her active lifestyle contrasts with her brother's quiet habits.","translation":"彼女の活動的なライフスタイルは、弟の静かな習慣と対照的です。"},
+                {"word":"Estimate","meaning":"推測する、見積もる","sentence":"Experts estimate that the discussion will last for two hours.","translation":"専門家は話し合いが2時間続くと推測しています。"},
+                {"word":"Focus","meaning":"焦点を当てる","sentence":"In today's meeting, we will focus on the exam strategy.","translation":"今日の会議では、試験対策に焦点を当てます。"},
+                {"word":"State","meaning":"明確に述べる、主張する","sentence":"Please state your name and school before speaking.","translation":"発言する前に、氏名と学校名を述べてください。"},
+                {"word":"Assume","meaning":"仮定する、当然と思う","sentence":"Do not assume that the test will be easy this year.","translation":"今年のテストが簡単だろうと当然のように思ってはいけません。"},
+                {"word":"Predict","meaning":"予測する、予言する","sentence":"No one can predict how the conference will end.","translation":"会議がどのように終わるかは誰にも予測できません。"},
+                {"word":"Acknowledge","meaning":"認める","sentence":"The team had to acknowledge their opponent's victory.","translation":"チームは相手の勝利を認めざるを得ませんでした。"},
+                {"word":"Praise","meaning":"褒める、称賛する","sentence":"The teacher praised the students for their high effort.","translation":"先生は生徒たちの高い努力を褒めました。"},
+                {"word":"Persist","meaning":"主張し続ける、固執する","sentence":"If you persist in this opinion, you will face disagreement.","translation":"この意見を主張し続けるなら、反対に直面するでしょう。"},
+                {"word":"Doubt","meaning":"疑う、疑念を抱く","sentence":"I doubt that they will change the schedule at this stage.","translation":"この段階で彼らがスケジュールを変更するかは疑わしいです。"},
+                {"word":"Argue","meaning":"主張する、論争する","sentence":"They argued that the library should remain open on Sundays.","translation":"彼らは図書館が日曜日も開館し続けるべきだと主張しました。"},
+                {"word":"Discuss","meaning":"話し合う、議論する","sentence":"We need to discuss the details of the science experiment.","translation":"科学実験の詳細について話し合う必要があります。"},
+                {"word":"Agree","meaning":"合意する、同意見である","sentence":"Almost everyone agreed to the new cooperative policy.","translation":"ほぼ全員が新しい協力政策に同意しました。"},
+                {"word":"Compare","meaning":"比較する、比べる","sentence":"Let's compare the two options before we make a decision.","translation":"決定を下す前に、2つの選択肢を比較しましょう。"},
+                {"word":"Contrast","meaning":"対比、差異","sentence":"There is a sharp contrast between the two proposals.","translation":"2つの提案の間には、はっきりとしたコントラスト（対比）があります。"},
+                {"word":"Support","meaning":"支持する、賛成する","sentence":"The survey shows that many students support online lectures.","translation":"調査は、多くの生徒がオンライン講義を支持していることを示しています。"},
+                {"word":"Oppose","meaning":"反対する、対抗する","sentence":"Some members of the class strongly opposed the idea.","translation":"クラスの一部のメンバーはそのアイデアに強く反対しました。"},
+                {"word":"Request","meaning":"要請する、懇願する","sentence":"She requested additional time to complete the listening test.","translation":"彼女はリスニングテストを完了するための追加時間を要求しました。"},
+                {"word":"Accept","meaning":"受け入れる、受諾する","sentence":"They decided to accept the terms of the cultural exchange.","translation":"彼らは文化交流の条件を受け入れることを決定しました。"},
+                {"word":"Reject","meaning":"拒絶する、拒否する","sentence":"The school board rejected the proposal for a longer break.","translation":"教育委員会は休み時間を長くする提案を拒否しました。"},
+                {"word":"Explain","meaning":"説明する、明確にする","sentence":"He tried to explain the rule using a simple diagram.","translation":"彼は簡単な図を使ってそのルールを説明しようとしました。"},
+                {"word":"Convey","meaning":"伝える、伝達する","sentence":"The author tried to convey the feeling of absolute isolation.","translation":"著者は完全な孤立感を伝えようとしました。"},
+                {"word":"Express","meaning":"表現する、述べる","sentence":"Please feel free to express your own opinions.","translation":"どうぞ自由にあなた自身の意見を表現してください。"},
+                {"word":"Indicate","meaning":"指し示す、示す","sentence":"The statistics indicate a change in user preference.","translation":"統計は、ユーザーの好みに変化があることを示しています。"},
+                {"word":"Imply","meaning":"暗示する、ほのめかす","sentence":"Her words imply that she has already made up her mind.","translation":"彼女の言葉は、彼女がすでに決心していることをほのめかしています。"},
+                {"word":"Mention","meaning":"言及する、口にする","sentence":"Did he mention when the debate session would start?","translation":"彼はディベート・セッションがいつ始まるか言及しましたか？"},
+                {"word":"Refer","meaning":"言及する、参照する","sentence":"Please refer to the chart on page ten of your handouts.","translation":"配布資料の10ページにある図表を参照してください。"},
+                {"word":"Reveal","meaning":"明らかにする、漏らす","sentence":"The survey results reveal an interesting trend.","translation":"調査結果は興味深い傾向を明らかにしています。"},
+                {"word":"Declare","meaning":"宣言する、表明する","sentence":"The school principal declared the open campus active.","translation":"校長はオープンキャンパスの開始を宣言しました。"},
+                {"word":"Introduce","meaning":"導入する、紹介する","sentence":"The speaker introduced a new method for memorizing vocabulary.","translation":"スピーカーは語彙を覚えるための新しい方法を紹介しました。"},
+                {"word":"Conclude","meaning":"締めくくる、結論づける","sentence":"To conclude, I would like to stress the importance of dialogue.","translation":"最後に、対話の重要性を強調したいと思います。"},
+                {"word":"Illustrate","meaning":"例証する、実例を示す","sentence":"These charts illustrate the demographic shifts over the decade.","translation":"これらのグラフは、過去10年間の人口統計上の変化を示しています。"},
+                {"word":"Interpret","meaning":"解釈する、翻訳する","sentence":"It is difficult to interpret the speaker's true intent.","translation":"話し手の本当の意図を解釈することは困難です。"},
+                {"word":"Translate","meaning":"翻訳する","sentence":"We need to translate this proposal into simple Japanese.","translation":"この提案書をわかりやすい日本語に翻訳する必要があります。"},
+                {"word":"Acknowledge","meaning":"認める","sentence":"The teacher acknowledged that the text was highly complex.","translation":"先生はその文章が非常に複雑であることを認めました。"},
+                {"word":"Confirm","meaning":"確実にする","sentence":"Please sign this sheet to confirm your class attendance.","translation":"授業への出席を確認するために、この用紙に署名してください。"},
+                {"word":"Observe","meaning":"目撃する、観察する","sentence":"The study observed that children learn quickly through play.","translation":"その研究は、子供たちが遊びを通じて早く学習することを観察しました。"},
+                {"word":"Remark","meaning":"発言、意見を言う","sentence":"The mentor remarked on the high standard of the research.","translation":"メンターは研究水準の高さについて意見を述べました。"},
+                {"word":"Assert","meaning":"主張する、明言する","sentence":"The paper asserts that climate change affects agriculture.","translation":"その論文は、気候変動が農業に影響を与えていると主張しています。"},
+                {"word":"Maintain","meaning":"主張し続ける、維持する","sentence":"He maintains that his original calculations were correct.","translation":"彼は自分の元の計算が正しかったと主張し続けています。"},
+                {"word":"Insist","meaning":"強く主張する、要求する","sentence":"They insist on the necessity of a secondary opinion.","translation":"彼らはセカンドオピニオン（第二の意見）の必要性を強く主張しています。"},
+                {"word":"Claim","meaning":"主張する、権利を要求する","sentence":"She claims to have found a solution to the debate deadlock.","translation":"彼女はディベートのデッドロック（膠着状態）への解決策を見つけたと主張しています。"},
+                {"word":"Recommend","meaning":"推奨する","sentence":"We highly recommend this study system for college exams.","translation":"大学受験にこの学習システムを強くお勧めします。"},
+                {"word":"Advocate","meaning":"強く支持する、主唱する","sentence":"The group advocates for the preservation of historical parks.","translation":"その団体は歴史的な公園の保護を提唱しています。"},
+                {"word":"Oppose","meaning":"反対する","sentence":"Local residents strongly oppose the construction of the factory.","translation":"地域住民は工場の建設に強く反対しています。"},
+                {"word":"Defend","meaning":"擁護する、防御する","sentence":"The team had to defend their theory against severe skepticism.","translation":"チームは激しい懐疑論に対して、自分たちの理論を擁護しなければなりませんでした。"},
+                {"word":"Challenge","meaning":"異議を唱える、挑戦する","sentence":"The findings challenge the traditional view of the solar system.","translation":"その発見は、太陽系に関する従来の常識に異議を唱えるものです。"},
+                {"word":"Question","meaning":"疑問を投げかける、質問する","sentence":"Many critics questioned the accuracy of the survey data.","translation":"多くの批評家が、調査データの正確性に疑問を投げかけました。"},
+                {"word":"Dispute","meaning":"反論する、抗争する","sentence":"No one can dispute the scientific success of the launch.","translation":"その打ち上げの科学的成功に誰も異議を唱えることはできません。"},
+                {"word":"Resolve","meaning":"解決する、決議する","sentence":"The school board resolved to increase funding for the gym.","translation":"学校理事会は体育館の資金を増やすことを決定しました。"},
+                {"word":"Compromise","meaning":"妥協する","sentence":"We had to compromise on some design details to save money.","translation":"私たちはコストを抑えるために、いくつかのデザイン細部で妥協せざるを得ませんでした。"},
+                {"word":"Negotiate","meaning":"話し合いにより交渉する","sentence":"They are trying to negotiate a new treaty between the nations.","translation":"彼らは国家間の新しい条約を交渉しようとしています。"},
+                {"word":"Reach","meaning":"到達する、届く","sentence":"We hope to reach a final decision by the end of this session.","translation":"このセッションの終わりまでに最終決定に達することを望んでいます。"},
+                {"word":"Agree","meaning":"同意する","sentence":"I agree with your suggestion to expand the digital archive.","translation":"デジタルアーカイブを拡大するというあなたの提案に同意します。"},
+                {"word":"Disagree","meaning":"同意しない、異なる","sentence":"I disagree with the assertion that textbooks are obsolete.","translation":"教科書が廃れたという主張には同意しません。"}
+            ],
+            pack3: [
+                {"word":"Fluctuate","meaning":"上下に変動する、揺れ動く","sentence":"The monthly sales fluctuate greatly depending on the weather.","translation":"月間の売上は、天候によって大きく変動します。"},
+                {"word":"Stable","meaning":"安定した、変動の少ない","sentence":"The price of wheat remained stable throughout last year.","translation":"小麦の価格は昨年を通じて安定していました。"},
+                {"word":"Significant","meaning":"著しい、極めて重要な","sentence":"The line graph shows a significant decrease in student numbers.","translation":"折れ線グラフは、生徒数の著しい減少を示しています。"},
+                {"word":"Gradual","meaning":"段階的な、なだらかな、徐々の","sentence":"We observed a gradual improvement in academic performance.","translation":"学業成績の緩やかな向上が観察されました。"},
+                {"word":"Sharp","meaning":"急激な、鋭い、はっきりとした","sentence":"There was a sharp increase in the consumption of electricity.","translation":"電気の消費量に急激な増加が見られました。"},
+                {"word":"Proportion","meaning":"比率、割合","sentence":"The pie chart displays the proportion of energy sources.","translation":"円グラフは、エネルギー源の割合を示しています。"},
+                {"word":"Peak","meaning":"ピークに達する、頂点、最高値","sentence":"The temperature is expected to peak at noon tomorrow.","translation":"気温は明日正午にピークに達すると予想されます。"},
+                {"word":"Majority","meaning":"大多数、過半数","sentence":"The vast majority of participants preferred the new design.","translation":"参加者の大多数が新しいデザインを好みました。"},
+                {"word":"Minority","meaning":"少数派、少数","sentence":"Only a tiny minority of students disagreed with the plan.","translation":"ほんの少数の生徒だけが、その計画に同意しませんでした。"},
+                {"word":"Decline","meaning":"減少する、低下する","sentence":"The bar chart reveals that local forest areas are starting to decline.","translation":"棒グラフは、地域の森林面積が減少し始めていることを明らかにしています。"},
+                {"word":"Decrease","meaning":"減少、低下する","sentence":"The graph shows a steady decrease in carbon emissions.","translation":"グラフは炭素排出量の着実な減少を示しています。"},
+                {"word":"Increase","meaning":"増加、高まる","sentence":"A rapid increase in tourist numbers was recorded last summer.","translation":"昨年の夏、観光客数の急速な増加が記録されました。"},
+                {"word":"Rapid","meaning":"急速な、素早い","sentence":"The region is experiencing rapid economic growth.","translation":"その地域は急速な経済成長を遂げています。"},
+                {"word":"Steady","meaning":"着実な、一定の","sentence":"The country has maintained steady progress in space research.","translation":"その国は宇宙研究において着実な進歩を維持しています。"},
+                {"word":"Slight","meaning":"わずかな、少しの","sentence":"The bar graph shows a slight difference between the two columns.","translation":"棒グラフは2つの列の間にわずかな違いを示しています。"},
+                {"word":"Drastic","meaning":"劇的な、猛烈な","sentence":"The government took drastic measures to cut down pollution.","translation":"政府は汚染を削減するために劇的な措置を講じました。"},
+                {"word":"Plunge","meaning":"急落する、飛び込む","sentence":"Stock market prices plunged after the sudden announcement.","translation":"突然の発表後、株式市場の価格が急落しました。"},
+                {"word":"Rocket","meaning":"急騰する、ロケット","sentence":"The demand for renewable energy has rocketed this year.","translation":"再生可能エネルギーの需要は、今年急増しました。"},
+                {"word":"Surge","meaning":"急増する、急上昇","sentence":"The online shop experienced a huge surge in traffic in December.","translation":"そのオンラインショップは12月にアクセス数の大きな急増を経験しました。"},
+                {"word":"Constant","meaning":"一定の、不変の","sentence":"The speed of light is a constant value in physics.","translation":"光の速度は物理学において一定の（不変の）値です。"},
+                {"word":"Level","meaning":"横ばいになる、水準、段階","sentence":"Sales are expected to level off during the winter season.","translation":"売上高は冬季の間、横ばいになると予想されます。"},
+                {"word":"Recover","meaning":"回復する、取り戻す","sentence":"The local industry recovered quickly from the recession.","translation":"地元の産業は不況から急速に回復しました。"},
+                {"word":"Contrast","meaning":"対比、違い","sentence":"The chart shows a strong contrast between urban and rural areas.","translation":"チャートは都市部と農村部の強いコントラスト（違い）を示しています。"},
+                {"word":"Comparison","meaning":"比較、対比","sentence":"A careful comparison of the data reveals an interesting pattern.","translation":"データを慎重に比較すると、興味深いパターンが明らかになります。"},
+                {"word":"Represent","meaning":"代表する、示す、表す","sentence":"Each bar on the chart represents a different age group.","translation":"グラフ上の各棒は、異なる年齢層を表しています。"},
+                {"word":"Display","meaning":"展示する、表示する","sentence":"The monitor displays real-time data from the sensors.","translation":"モニターはセンサーからのリアルタイムデータを表示します。"},
+                {"word":"Illustrate","meaning":"図解する、示す","sentence":"This pie chart illustrates the distribution of household expenses.","translation":"この円グラフは家計費の配分を示しています。"},
+                {"word":"Indicate","meaning":"示す、暗示する","sentence":"A high score indicates a strong understanding of grammar.","translation":"高いスコアは、文法をしっかりと理解していることを示しています。"},
+                {"word":"Reveal","meaning":"明らかにする、示す","sentence":"The report reveals that renewable usage has doubled.","translation":"報告書は、再生可能エネルギーの利用が倍増したことを明らかにしています。"},
+                {"word":"Suggest","meaning":"示唆する、暗示する","sentence":"The trends suggest that the market is shifting to eco-cars.","translation":"傾向は、市場がエコカーに移行していることを示唆しています。"},
+                {"word":"Analysis","meaning":"分析、解明","sentence":"The scientist published an analysis of the regional soil.","translation":"科学者は地域の土壌分析を公表しました。"},
+                {"word":"Statistics","meaning":"統計、統計データ","sentence":"Official statistics show that the birth rate is declining.","translation":"公式統計は、出生率が低下していることを示しています。"},
+                {"word":"Percent","meaning":"パーセント、割合","sentence":"Over eighty percent of the energy is produced by coal.","translation":"そのエネルギーの80パーセント以上は石炭によって生産されています。"},
+                {"word":"Ratio","meaning":"比率、割合","sentence":"The ratio of teachers to students is one to fifteen.","translation":"教師対生徒の比率は1対15です。"},
+                {"word":"Fraction","meaning":"ほんの一部、分数","sentence":"Only a small fraction of the budget went to public relations.","translation":"予算のほんの一部しか広報活動に当てられませんでした。"},
+                {"word":"Average","meaning":"平均、平均値","sentence":"The average daily temperature has increased by one degree.","translation":"平均気温が1度上昇しました。"},
+                {"word":"Maximum","meaning":"最大値、最大の","sentence":"The system can handle a maximum of ten thousand requests.","translation":"システムは最大1万回のリクエストを処理できます。"},
+                {"word":"Minimum","meaning":"最小値、最少の","sentence":"A minimum of three participants is required to run the class.","translation":"講座を開講するには、最低3人の参加者が必要です。"},
+                {"word":"Figure","meaning":"数字、図、形状","sentence":"These figures suggest that our sales campaign was effective.","translation":"これらの数値は、私たちのセールスキャンペーンが効果的であったことを示唆しています。"},
+                {"word":"Total","meaning":"合計、総計、完全な","sentence":"The total number of applications reached five hundred.","translation":"応募の総数は500に達しました。"},
+                {"word":"Double","meaning":"二倍、二倍にする","sentence":"The cost of imported paper doubled in less than a year.","translation":"輸入紙のコストは1年未満で2倍になりました。"},
+                {"word":"Triple","meaning":"三倍、三倍にする","sentence":"The company tripled its production capacity to meet demand.","translation":"会社は需要を満たすために生産能力を3倍にしました。"},
+                {"word":"Quarter","meaning":"四分の一、15分、四半期","sentence":"More than a quarter of the students cycle to school.","translation":"4分の1以上の生徒が自転車で通学しています。"},
+                {"word":"Half","meaning":"半分、ハーフ","sentence":"About half of the survey respondents prefer online shopping.","translation":"調査回答者の約半分がオンラインショッピングを好んでいます。"},
+                {"word":"Trend","meaning":"傾向、トレンド、流行","sentence":"The graph shows a clear upward trend in global temperatures.","translation":"グラフは、世界気温の明確な上昇傾向を示しています。"},
+                {"word":"Pattern","meaning":"パターン、様式、規則性","sentence":"Meteorologists are studying the changing pattern of wind.","translation":"気象学者たちは風のパターンの変化を研究しています。"},
+                {"word":"Correlation","meaning":"相関関係、密接な関係","sentence":"There is a strong correlation between exercise and sleep quality.","translation":"運動と睡眠の質の間には強い相関関係があります。"},
+                {"word":"Difference","meaning":"違い、差額","sentence":"The line graph highlights the difference between the classes.","translation":"折れ線グラフはクラス間の違いを浮き彫りにしています。"},
+                {"word":"Variation","meaning":"変化、バリエーション、変動","sentence":"We noticed a wide variation in the test results.","translation":"私たちはテスト結果に大きなばらつきがあることに気づきました。"},
+                {"word":"Deviation","meaning":"偏差、逸脱","sentence":"Any deviation from the standard index must be reported.","translation":"標準指標からの乖離は報告されなければなりません。"},
+                {"word":"Range","meaning":"範囲、領域、並べる","sentence":"The temperature ranges from ten to twenty-five degrees.","translation":"気温は10度から25度の範囲に及びます。"},
+                {"word":"Distribution","meaning":"分布、流通、配分","sentence":"The map displays the distribution of rainfall across the island.","translation":"地図は島全体の降水量の分布を示しています。"},
+                {"word":"Outlier","meaning":"外れ値、特異データ","sentence":"The high score in class B is an outlier in the statistics.","translation":"クラスBのハイスコアは、統計における外れ値（特異な数値）です。"},
+                {"word":"Sample","meaning":"サンプル、標本、試供品","sentence":"The researchers analyzed a sample of ten thousand citizens.","translation":"研究者たちは1万人分の市民サンプルを分析しました。"},
+                {"word":"Data","meaning":"データ、資料","sentence":"We need more database storage to handle the incoming data.","translation":"入ってくるデータを処理するために、より多くのデータベースストレージが必要です。"},
+                {"word":"Category","meaning":"区分、カテゴリー","sentence":"The files are classified into three separate categories.","translation":"ファイルは3つの別々のカテゴリーに分類されています。"},
+                {"word":"Segment","meaning":"部分、区分、セグメント","sentence":"The chart shows the youth market is the largest segment.","translation":"チャートは若者市場が最大のセグメント（部分）であることを示しています。"},
+                {"word":"Axis","meaning":"軸、地軸、座標軸","sentence":"The vertical axis of the graph shows the price in yen.","translation":"グラフの縦軸は円単位の価格を示しています。"},
+                {"word":"Variable","meaning":"変数、変化しやすい要素","sentence":"Temperature is an important variable in this chemical research.","translation":"温度は、この化学研究における重要な変数（変化する要素）です。"},
+                {"word":"Coefficient","meaning":"係数、共同作用因子","sentence":"The statistical test calculated a high correlation coefficient.","translation":"統計検定により、高い相関係数が算出されました。"},
+                {"word":"Index","meaning":"指標、インデックス、指数","sentence":"The cost of living index rose by three percent last month.","translation":"生活費指数は先月3パーセント上昇しました。"},
+                {"word":"Indicator","meaning":"指標、インジケーター","sentence":"High electricity use is a key indicator of economic activity.","translation":"高い電力消費は、経済活動の主要な指標です。"},
+                {"word":"Measure","meaning":"測定する、基準、評価手段","sentence":"The test measures reading comprehension skills accurately.","translation":"そのテストは読解力を正確に測定します。"},
+                {"word":"Scale","meaning":"規模、縮尺、はかり","sentence":"The experiment was conducted on a small scale in the lab.","translation":"その実験は、研究室で小規模に行われました。"},
+                {"word":"Dimension","meaning":"寸法、次元、アスペクト","sentence":"We need to consider the physical dimensions of the storage.","translation":"私たちは保管庫の物理的な寸法を考慮する必要があります。"},
+                {"word":"Parameter","meaning":"基準、媒介変数、パラメータ","sentence":"The programmer set the safety parameters for the drone.","translation":"プログラマーはドローンの安全パラメータを設定しました。"},
+                {"word":"Outcome","meaning":"結果、成果","sentence":"The final outcome of the research exceeded our expectations.","translation":"研究の最終成果は、私たちの期待を上回りました。"},
+                {"word":"Result","meaning":"結果、結末、生じる","sentence":"His success was the result of consistent daily training.","translation":"彼の成功は、毎日の継続的なトレーニングの結果でした。"},
+                {"word":"Consequence","meaning":"必然的な結果、重要さ","sentence":"Rising sea levels are a direct consequence of global warming.","translation":"海面の上昇は、地球温暖化の直接的な結果です。"},
+                {"word":"Effect","meaning":"効果、影響、結果","sentence":"The new law had a dramatic effect on reducing plastic waste.","translation":"新法は、プラスチックゴミの削減に劇的な効果をもたらしました。"},
+                {"word":"Impact","meaning":"強い影響、衝撃、衝突","sentence":"The industrial revolution had a huge impact on human society.","translation":"産業革命は人間社会に極めて大きな影響を与えました。"},
+                {"word":"Influence","meaning":"影響、勢力、及ぼす","sentence":"Teachers have a profound influence on their student's future.","translation":"教師は、生徒の将来に深い影響を与えます。"},
+                {"word":"Source","meaning":"源、出どころ、情報源","sentence":"Solar energy is a clean and infinite source of power.","translation":"太陽エネルギーは、クリーンで無限の動力源です。"},
+                {"word":"Origin","meaning":"起源、始まり、出身","sentence":"The custom has its origins in ancient autumn festivals.","translation":"その慣習は、古代の秋の祭りに起源を持っています。"},
+                {"word":"Factor","meaning":"要因、要素、因数","sentence":"Good nutrition is an essential factor for healthy growth.","translation":"優れた栄養は健康的な成長のための不可欠な要因です。"},
+                {"word":"Element","meaning":"要素、元素、成分","sentence":"Trust is a key element in establishing a good friendship.","translation":"信頼は、良い友情を築くための重要な要素です。"},
+                {"word":"Condition","meaning":"状態、条件、環境","sentence":"The weather conditions were perfect for the outdoor run.","translation":"屋外ランニングにとって完璧な気象条件でした。"},
+                {"word":"Status","meaning":"状態、ステータス","sentence":"You can check your order status on the shop website.","translation":"ショップのウェブサイトで、ご注文状況を確認することができます。"},
+                {"word":"Situation","meaning":"状況、立場、情勢","sentence":"The principal handled the emergency situation calmly.","translation":"校長は緊急状況に冷静に対処しました。"},
+                {"word":"Context","meaning":"文脈、背景、状況","sentence":"We need to analyze his remarks in their proper context.","translation":"私たちは彼の発言を、適切な文脈の中で分析する必要があります。"},
+                {"word":"Background","meaning":"背景、経歴、育ち","sentence":"The book explains the historical background of the revolution.","translation":"その本は革命の歴史的背景を説明しています。"},
+                {"word":"Perspective","meaning":"視点、大局観、遠近法","sentence":"Travel expands your mind and gives you a new perspective.","translation":"旅は視野を広げ、新しい視点を与えてくれます。"},
+                {"word":"Overview","meaning":"概観、全体の要約","sentence":"The pamphlet provides a general overview of the local arts.","translation":"パンフレットは地域の芸術活動に関する一般的な概観を提供しています。"},
+                {"word":"Summary","meaning":"要約、概略","sentence":"The student wrote a brief summary of the biology article.","translation":"生徒は生物学の記事の簡潔な要約を書きました。"},
+                {"word":"Outline","meaning":"輪郭、あらまし、要点","sentence":"The speaker presented an outline of the proposed project.","translation":"スピーカーは、提案されたプロジェクトの概要を説明しました。"},
+                {"word":"Scope","meaning":"範囲、視野、余地","sentence":"This issue is outside the scope of our current discussion.","translation":"この問題は、私たちの現在の議論の範囲外です。"},
+                {"word":"Limit","meaning":"制限、極限、限定する","sentence":"The highway has a speed limit of one hundred kilometers.","translation":"高速道路の制限速度は100キロメートルです。"},
+                {"word":"Boundary","meaning":"境界、境界線","sentence":"A stone wall marks the boundary between the properties.","translation":"石壁が敷地間の境界を示しています。"},
+                {"word":"Margin","meaning":"余白、差、マージン","sentence":"Please write your notes in the margin of the handout.","translation":"配布資料の余白にメモを書き込んでください。"},
+                {"word":"Gap","meaning":"隙間、隔たり、ギャップ","sentence":"The gap between the rich and the poor is widening.","translation":"貧富の格差が広がっています。"},
+                {"word":"Level","meaning":"基準、レベル","sentence":"The water level of the river rose rapidly after the storm.","translation":"嵐の後、川の水位が急激に上昇しました。"},
+                {"word":"Degree","meaning":"程度、度数、学位","sentence":"He has a high degree of skill in computer programming.","translation":"彼はコンピュータープログラミングにおいて高い程度の技術を持っています。"},
+                {"word":"Extent","meaning":"広さ、程度、限度","sentence":"They didn't realize the extent of the damage at first.","translation":"彼らは最初、被害の程度を理解していませんでした。"},
+                {"word":"Volume","meaning":"音量、容量、巻","sentence":"The library houses a vast volume of historical manuscripts.","translation":"その図書館には、膨大な量の歴史的手書き原稿が保管されています。"},
+                {"word":"Amount","meaning":"量、総額、達する","sentence":"A substantial amount of food is wasted every single day.","translation":"毎日、かなりの量の食品が廃棄されています。"},
+                {"word":"Quantity","meaning":"量、分量、数量","sentence":"The factory prioritizes product quality over quantity.","translation":"その工場は、数量よりも製品の品質を優先しています。"},
+                {"word":"Quality","meaning":"品質、特質、上質な","sentence":"We should focus on providing quality education to children.","translation":"私たちは子供たちに質の高い教育を提供することに焦点を当てるべきです。"},
+                {"word":"Feature","meaning":"特徴、特色、出演させる","sentence":"A key feature of the smartphone is its high-quality camera.","translation":"そのスマートフォンの大きな特徴は、高品質なカメラです。"},
+                {"word":"Property","meaning":"特性、財産、不動産","sentence":"The chemical has properties that help preserve materials.","translation":"その化学物質には、素材の保存を助ける特性があります。"},
+                {"word":"Characteristic","meaning":"特徴的な、特有の","sentence":"A warm welcome is characteristic of the local residents.","translation":"温かい歓迎は、地域の住民に特徴的なものです。"}
+            ]
+        };
+
+        let currentPackKey = 'pack1';
+        let words = [];
+        let unclearWordMap = {};
+        let playbackMode = 'all';
+        let currentIndex = 0;
+        let isAutoPlay = true;
+        let speechRate = 1.0;
+        let autoPlayInterval = 1500;
+        let currentUtterance = null;
+        let activeTimeout = null;
+        let voices = [];
+        let currentStep = 0;
+        let isPlaying = false;
+        let isPaused = false;
+
+        function loadUnclearData() { try { const data = localStorage.getItem('gt_unclear_p1'); if (data) unclearWordMap = JSON.parse(data); } catch (e) {} }
+        function saveUnclearData() { try { localStorage.setItem('gt_unclear_p1', JSON.stringify(unclearWordMap)); } catch (e) {} }
+        function initVoices() { voices = window.speechSynthesis.getVoices(); if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = () => { voices = window.speechSynthesis.getVoices(); }; }
+        function getVoiceForLang(langCode) { const list = voices.length > 0 ? voices : window.speechSynthesis.getVoices(); let v = list.find(x => x.lang === langCode); return v || list.find(x => x.lang.startsWith(langCode.split('-')[0])); }
+
+        function speak(text, lang, callback) {
+            window.speechSynthesis.cancel();
+            if (activeTimeout) clearTimeout(activeTimeout);
+            if (!text) { if (callback) callback(); return; }
+            setTimeout(() => {
+                const u = new SpeechSynthesisUtterance(text);
+                u.rate = speechRate;
+                const v = getVoiceForLang(lang);
+                if (v) u.voice = v; else u.lang = lang;
+                window.activeUtterance = u;
+                u.onend = () => { window.activeUtterance = null; setTimeout(() => { if (callback) callback(); }, 120); };
+                u.onerror = () => { window.activeUtterance = null; setTimeout(() => { if (callback) callback(); }, 120); };
+                window.speechSynthesis.speak(u);
+            }, 120);
+        }
+
+        function changeLearningPack() {
+            stopSpeaking();
+            currentPackKey = document.getElementById('select-pack').value;
+            words = packs[currentPackKey] ? [...packs[currentPackKey]] : [];
+            currentIndex = 0;
+            playbackMode = 'all';
+            updatePlayerUI();
+            updateModeCounters();
+            if (isAutoPlay && words.length > 0) setTimeout(() => startWordFlow(), 200);
+        }
+
+        function switchTab(tabName) {
+            stopSpeaking();
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('bg-indigo-50', 'text-indigo-700'); b.classList.add('text-slate-600', 'hover:bg-slate-100'); });
+            const active = document.getElementById(`tab-btn-${tabName}`);
+            active.classList.remove('text-slate-600', 'hover:bg-slate-100'); active.classList.add('bg-indigo-50', 'text-indigo-700');
+            if (tabName === 'list') renderWordList();
+        }
+
+        function getActiveWords() { return playbackMode === 'unclear' ? words.filter(w => unclearWordMap[w.word] === true) : words; }
+
+        function setPlaybackMode(mode) {
+            stopSpeaking();
+            if (mode === 'unclear' && words.filter(w => unclearWordMap[w.word] === true).length === 0) { alert("わからない登録されている単語がありません。"); return; }
+            playbackMode = mode; currentIndex = 0;
+            const a = document.getElementById('mode-all-btn'), u = document.getElementById('mode-unclear-btn');
+            if (mode === 'all') { a.className = "px-3 py-1 rounded-md text-xs font-semibold bg-white text-indigo-600 shadow-sm"; u.className = "px-3 py-1 rounded-md text-xs font-semibold text-slate-600"; }
+            else { a.className = "px-3 py-1 rounded-md text-xs font-semibold text-slate-600"; u.className = "px-3 py-1 rounded-md text-xs font-semibold bg-white text-indigo-600 shadow-sm"; }
+            updatePlayerUI(); updateModeCounters();
+            if (isAutoPlay && words.length > 0) startWordFlow();
+        }
+
+        function updateModeCounters() {
+            document.getElementById('count-all-words').innerText = words.length;
+            document.getElementById('count-unclear-words').innerText = words.filter(w => unclearWordMap[w.word] === true).length;
+            document.querySelectorAll('.total-count-badge').forEach(b => b.innerText = words.length);
+        }
+
+        function updatePlayerUI() {
+            if (words.length === 0) return;
+            const active = getActiveWords(), w = active[currentIndex];
+            if (!w) { if (playbackMode === 'unclear') setPlaybackMode('all'); return; }
+            document.getElementById('card-word').innerText = w.word;
+            document.getElementById('card-meaning').innerText = w.meaning;
+            document.getElementById('card-sentence').innerText = w.sentence || "—";
+            document.getElementById('card-translation').innerText = w.translation || "—";
+            document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${active.length}`;
+            document.getElementById('progress-bar').style.width = `${((currentIndex + 1) / active.length) * 100}%`;
+            updateUnclearCardBtn(w.word); resetSectionsVisual();
+        }
+
+        function resetSectionsVisual() { ['section-word', 'section-meaning', 'section-sentence', 'section-translation'].forEach(id => document.getElementById(id).classList.remove('speech-active-section')); }
+        function highlightSection(id) { resetSectionsVisual(); document.getElementById(id).classList.add('speech-active-section'); }
+
+        function updateUnclearCardBtn(word) {
+            const isU = unclearWordMap[word] === true, b = document.getElementById('card-unclear-toggle'), i = document.getElementById('card-unclear-icon'), t = document.getElementById('card-unclear-text');
+            if (isU) { i.className = "fa-solid fa-star text-amber-500"; t.innerText = "わからない登録済"; b.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-semibold shadow-sm"; }
+            else { i.className = "fa-regular fa-star text-slate-400"; t.innerText = "わからない"; b.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-400 text-xs font-semibold shadow-sm"; }
+        }
+
+        function toggleCurrentUnclear() { const active = getActiveWords(), w = active[currentIndex]; if (!w) return; unclearWordMap[w.word] = !unclearWordMap[w.word]; saveUnclearData(); updateUnclearCardBtn(w.word); updateModeCounters(); }
+        function toggleWordUnclear(word) { unclearWordMap[word] = !unclearWordMap[word]; saveUnclearData(); updateModeCounters(); const active = getActiveWords(), w = active[currentIndex]; if (w && w.word === word) updateUnclearCardBtn(word); }
+
+        function speakCurrentPart(part) { stopSpeaking(); const active = getActiveWords(), w = active[currentIndex]; if (!w) return; setTimeout(() => { if (part === 'word') { highlightSection('section-word'); speak(w.word, 'en-US'); } else if (part === 'meaning') { highlightSection('section-meaning'); speak(w.meaning, 'ja-JP'); } else if (part === 'sentence' && w.sentence) { highlightSection('section-sentence'); speak(w.sentence, 'en-US'); } else if (part === 'translation' && w.translation) { highlightSection('section-translation'); speak(w.translation, 'ja-JP'); } }, 100); }
+        function stopSpeaking() { window.speechSynthesis.cancel(); if (activeTimeout) clearTimeout(activeTimeout); isPlaying = false; isPaused = false; currentStep = 0; resetSectionsVisual(); updatePlayButtonUI(); }
+        function pauseSpeaking() { window.speechSynthesis.cancel(); if (activeTimeout) clearTimeout(activeTimeout); isPaused = true; updatePlayButtonUI(); }
+
+        function togglePlayPause() { if (words.length === 0) return; if (!isPlaying) startWordFlow(); else if (isPaused) { isPaused = false; updatePlayButtonUI(); playStep(); } else pauseSpeaking(); }
+
+        function updatePlayButtonUI() {
+            const b = document.getElementById('btn-play-all'); if (!b) return;
+            if (!isPlaying) b.innerHTML = `<i class="fa-solid fa-play"></i><span>再生</span>`;
+            else if (isPaused) b.innerHTML = `<i class="fa-solid fa-play"></i><span>再開</span>`;
+            else b.innerHTML = `<i class="fa-solid fa-pause"></i><span>停止</span>`;
+        }
+
+        function startWordFlow() { if (words.length === 0) return; stopSpeaking(); isPlaying = true; isPaused = false; currentStep = 0; playStep(); }
+
+        function playStep() {
+            if (!isPlaying || isPaused) return; const active = getActiveWords(), w = active[currentIndex]; if (!w) return;
+            let text = "", lang = "", id = "", delay = 1000;
+            switch (currentStep) {
+                case 0: text = w.word; lang = 'en-US'; id = 'section-word'; delay = 800; break;
+                case 1: text = w.meaning; lang = 'ja-JP'; id = 'section-meaning'; delay = w.sentence ? 1000 : autoPlayInterval; break;
+                case 2: text = w.sentence; lang = 'en-US'; id = 'section-sentence'; delay = 800; break;
+                case 3: text = w.translation; lang = 'ja-JP'; id = 'section-translation'; delay = autoPlayInterval; break;
+            }
+            if(!text) {
+                if (currentStep < 3) { currentStep++; playStep(); }
+                else { currentStep = 0; if (isAutoPlay) { nextWord(true); isPlaying = true; playStep(); } else stopSpeaking(); }
+                return;
+            }
+
+            highlightSection(id); updatePlayButtonUI();
+            speak(text, lang, () => {
+                if (!isPlaying || isPaused) return;
+                activeTimeout = setTimeout(() => {
+                    if (currentStep < 3) { currentStep++; playStep(); }
+                    else { currentStep = 0; if (isAutoPlay) { nextWord(true); isPlaying = true; playStep(); } else { stopSpeaking(); } }
+                }, delay);
+            });
+        }
+
+        function toggleAutoPlay() {
+            isAutoPlay = !isAutoPlay; const b = document.getElementById('btn-autoplay'), d = document.getElementById('status-dot'), p = document.getElementById('ping-indicator'), t = document.getElementById('text-autoplay');
+            if (isAutoPlay) { b.className = "px-4 py-1.5 rounded-xl text-sm font-semibold border border-emerald-200 bg-emerald-50 text-emerald-800 flex items-center gap-2"; d.className = "relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"; p.classList.remove('hidden'); t.innerText = "自動再生 ON"; if(words.length > 0) startWordFlow(); }
+            else { b.className = "px-4 py-1.5 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-700 flex items-center gap-2"; d.className = "relative inline-flex rounded-full h-3.5 w-3.5 bg-slate-300"; p.classList.add('hidden'); t.innerText = "自動再生 OFF"; stopSpeaking(); }
+        }
+
+        function prevWord() { stopSpeaking(); const active = getActiveWords(); if (active.length === 0) return; currentIndex = currentIndex > 0 ? currentIndex - 1 : active.length - 1; updatePlayerUI(); if (isAutoPlay) setTimeout(() => startWordFlow(), 150); }
+        function nextWord(keep = false) { if (!keep) stopSpeaking(); else { window.speechSynthesis.cancel(); if (activeTimeout) clearTimeout(activeTimeout); currentStep = 0; } const active = getActiveWords(); if (active.length === 0) return; currentIndex = currentIndex < active.length - 1 ? currentIndex + 1 : 0; updatePlayerUI(); }
+        function changeRate() { speechRate = parseFloat(document.getElementById('select-rate').value); }
+        function changeInterval() { autoPlayInterval = parseInt(document.getElementById('select-interval').value); }
+
+        function renderWordList() {
+            const tbody = document.getElementById('word-table-body'); tbody.innerHTML = '';
+            if (words.length === 0) return;
+            words.forEach((w, idx) => {
+                const isU = unclearWordMap[w.word] === true, tr = document.createElement('tr');
+                tr.className = `hover:bg-indigo-50/40 cursor-pointer ${currentIndex === idx && playbackMode === 'all' ? 'bg-indigo-50/70 font-bold' : ''}`;
+                tr.onclick = (e) => { if (e.target.closest('.unclear-checkbox')) return; playbackMode = 'all'; currentIndex = idx; switchTab('player'); updatePlayerUI(); setTimeout(() => startWordFlow(), 150); };
+                tr.innerHTML = `<td class="py-3 px-4 text-center"><input type="checkbox" ${isU?'checked':''} onchange="toggleWordUnclear('${w.word}')" class="unclear-checkbox w-5 h-5 text-indigo-600 rounded"></td><td class="py-3 px-4 font-mono text-xs">${idx+1}</td><td class="py-3 px-4 font-bold text-indigo-700">${w.word}</td><td class="py-3 px-4">${w.meaning}</td><td class="py-3 px-4 hidden md:table-cell truncate max-w-xs">${w.sentence || ''}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function startApp() {
+            try { const u = new SpeechSynthesisUtterance(''); u.volume = 0; window.speechSynthesis.speak(u); setTimeout(() => window.speechSynthesis.cancel(), 80); } catch(e) {}
+            document.getElementById('start-overlay').style.display = 'none';
+            words = packs[currentPackKey] ? [...packs[currentPackKey]] : [];
+            updatePlayerUI(); updateModeCounters();
+        }
+
+        window.onload = () => { initVoices(); loadUnclearData(); };
+    </script>
+</body>
+</html>

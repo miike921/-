@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Word Trainer Part 4 (901-1200語)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .logo-font { font-family: 'Comfortaa', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .speech-active-section { border-color: #4f46e5 !important; background-color: rgba(79, 70, 229, 0.05) !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08); transform: scale(1.01); }
+        button, select { min-height: 46px; }
+        #start-overlay { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.5rem; padding: 2rem; }
+        #start-btn { background: white; color: #e11d48; font-weight: 700; font-size: 1.15rem; padding: 1.1rem 3rem; border-radius: 1rem; box-shadow: 0 8px 32px rgba(0,0,0,0.25); border: none; cursor: pointer; min-height: 60px; transition: transform 0.1s; }
+        #start-btn:active { transform: scale(0.96); }
+    </style>
+</head>
+<body class="min-height-screen flex flex-col justify-between text-slate-800">
+    <div id="start-overlay">
+        <div style="text-align:center;">
+            <div style="width:88px;height:88px;background:rgba(255,255,255,0.2);border-radius:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;box-shadow:0 8px 32px rgba(0,0,0,0.15);"><i class="fa-solid fa-book-open" style="font-size:2.5rem;color:white;"></i></div>
+            <h1 class="logo-font" style="font-size:2rem;font-weight:700;color:white;margin-bottom:0.3rem;">Word Trainer</h1>
+            <p style="color:rgba(254,205,211,1);font-size:0.9rem;">Part 4: 共通テスト必須 No.10〜12</p>
+        </div>
+        <button id="start-btn" onclick="startApp()"><i class="fa-solid fa-play" style="margin-right:0.6rem;"></i>タップして開始</button>
+    </div>
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col lg:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-rose-600 text-white p-2 rounded-xl shadow-md"><i class="fa-solid fa-book-open text-xl"></i></div>
+                <div><h1 class="text-lg font-bold text-slate-900 logo-font">Gemini Word Trainer</h1><p class="text-[10px] text-slate-500 font-semibold">Part 4 (No.10〜12 収録)</p></div>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-full lg:w-auto">
+                <span class="text-xs font-bold text-slate-500 px-2 hidden sm:inline">教材:</span>
+                <select id="select-pack" onchange="changeLearningPack()" class="bg-white border-0 text-slate-800 font-bold text-sm py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-sm w-full lg:w-auto">
+                    <option value="pack10" selected>No.10 政治経済・グローバル</option>
+                    <option value="pack11">No.11 抽象概念・高度語彙 A</option>
+                    <option value="pack12">No.12 抽象概念・高度語彙 B</option>
+                </select>
+            </div>
+            <div class="flex gap-2 w-full lg:w-auto justify-end">
+                <button onclick="switchTab('player')" id="tab-btn-player" class="tab-btn flex-1 lg:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition bg-rose-50 text-rose-700"><i class="fa-solid fa-play mr-1.5"></i>プレーヤー</button>
+                <button onclick="switchTab('list')" id="tab-btn-list" class="tab-btn flex-1 lg:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-list mr-1.5"></i>一覧 (<span class="total-count-badge">0</span>)</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl w-full mx-auto p-4 flex flex-col justify-center">
+        <!-- プレーヤータブ -->
+        <div id="tab-player" class="tab-content block space-y-6">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex flex-col sm:flex-row justify-between gap-3 pb-2 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <div class="inline-flex rounded-lg p-1 bg-slate-100">
+                            <button id="mode-all-btn" onclick="setPlaybackMode('all')" class="px-3 py-1 rounded-md text-xs font-semibold bg-white text-rose-600 shadow-sm">全単語 (<span id="count-all-words">0</span>)</button>
+                            <button id="mode-unclear-btn" onclick="setPlaybackMode('unclear')" class="px-3 py-1 rounded-md text-xs font-semibold text-slate-600">わからない (<span id="count-unclear-words">0</span>)</button>
+                        </div>
+                    </div>
+                    <span id="progress-text" class="text-sm font-bold text-slate-700">0 / 0</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden"><div id="progress-bar" class="bg-rose-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+            </div>
+
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-md p-6 sm:p-10 relative overflow-hidden min-h-[440px] flex flex-col justify-between">
+                <div class="absolute top-4 right-4 z-20">
+                    <button id="card-unclear-toggle" onclick="toggleCurrentUnclear()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-400 font-semibold text-xs shadow-sm"><i class="fa-regular fa-star text-sm" id="card-unclear-icon"></i><span id="card-unclear-text">わからない</span></button>
+                </div>
+                <div class="space-y-3.5 z-10 mt-6" id="card-content-area">
+                    <div id="section-word" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50"><div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2.5 py-0.5 rounded-full">Step 1: Word</span><button onclick="speakCurrentPart('word')" class="text-indigo-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div><h2 id="card-word" class="text-3xl sm:text-4xl font-extrabold text-slate-950">Loading...</h2></div>
+                    <div id="section-meaning" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50"><div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2.5 py-0.5 rounded-full">Step 2: Meaning</span><button onclick="speakCurrentPart('meaning')" class="text-rose-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div><p id="card-meaning" class="text-lg sm:text-xl font-bold text-slate-850">—</p></div>
+                    <div id="section-sentence" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50"><div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-teal-500 bg-teal-50 px-2.5 py-0.5 rounded-full">Step 3: Example</span><button onclick="speakCurrentPart('sentence')" class="text-teal-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div><p id="card-sentence" class="text-base sm:text-lg font-medium text-slate-700 italic">—</p></div>
+                    <div id="section-translation" class="p-3.5 rounded-2xl border-2 border-transparent bg-slate-50/50"><div class="flex items-center gap-2 mb-0.5"><span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-2.5 py-0.5 rounded-full">Step 4: Translation</span><button onclick="speakCurrentPart('translation')" class="text-amber-600 p-1"><i class="fa-solid fa-volume-high text-xs"></i></button></div><p id="card-translation" class="text-sm sm:text-base font-normal text-slate-600">—</p></div>
+                </div>
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 pt-6 border-t border-slate-100 z-10">
+                    <div class="flex items-center gap-3">
+                        <button id="btn-autoplay" onclick="toggleAutoPlay()" class="px-4 py-1.5 rounded-xl text-sm font-semibold border border-rose-200 bg-rose-50 text-rose-800 shadow-sm flex items-center gap-2"><span class="relative flex h-3.5 w-3.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" id="ping-indicator"></span><span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-500" id="status-dot"></span></span><span id="text-autoplay">自動再生 ON</span></button>
+                        <select id="select-interval" onchange="changeInterval()" class="bg-transparent border-b border-slate-300 text-slate-600 text-xs py-0.5"><option value="1500" selected>短め</option><option value="2500">普通</option><option value="4000">長め</option></select>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="prevWord()" class="w-12 h-12 rounded-full border border-slate-200 bg-white flex justify-center items-center shadow-sm"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button id="btn-play-all" onclick="togglePlayPause()" class="px-8 h-12 rounded-full bg-rose-600 text-white font-bold shadow-md flex items-center gap-2"><i class="fa-solid fa-play"></i><span id="text-play-all">再生</span></button>
+                        <button onclick="nextWord()" class="w-12 h-12 rounded-full border border-slate-200 bg-white flex justify-center items-center shadow-sm"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <select id="select-rate" onchange="changeRate()" class="bg-transparent border-b border-slate-300 text-slate-600 text-xs py-0.5"><option value="0.8">0.8x</option><option value="1.0" selected>1.0x</option><option value="1.2">1.2x</option></select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 一覧タブ -->
+        <div id="tab-list" class="tab-content hidden space-y-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto max-h-[500px]">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500"><th class="py-3 px-4 w-16 text-center">マーク</th><th class="py-3 px-4 w-16">No.</th><th class="py-3 px-4">英単語</th><th class="py-3 px-4">意味</th><th class="py-3 px-4 hidden md:table-cell">例文</th></tr></thead>
+                        <tbody id="word-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const packs = {
+            pack10: [
+                {"word":"Democracy","meaning":"民主主義","sentence":"A healthy democracy relies on active citizen participation.","translation":"健全な民主主義は市民の積極的な参加に依存している。"},
+                {"word":"Sovereignty","meaning":"主権、統治権","sentence":"The treaty respects the sovereignty of all member nations.","translation":"その条約はすべての加盟国の主権を尊重している。"},
+                {"word":"Constitution","meaning":"憲法、組織、体質","sentence":"The court decided that the new law contradicts the constitution.","translation":"裁判所は、その新しい法律が憲法と矛盾していると判定した。"},
+                {"word":"Legislation","meaning":"法律、立法行為","sentence":"The council proposed strict legislation to reduce carbon emission.","translation":"議会は炭素排出を削減するための厳しい法律（立法）を提案した。"},
+                {"word":"Administration","meaning":"行政、政府、管理運営","sentence":"The presidential administration announced a new financial policy.","translation":"大統領政府（政権）は新しい財政政策を発表した。"},
+                {"word":"Bureaucracy","meaning":"官僚制度、お役所仕事","sentence":"The administrative process was slowed down by heavy bureaucracy.","translation":"行政手続きは煩雑なお役所仕事によって遅らされた。"},
+                {"word":"Electorate","meaning":"有権者、選挙民","sentence":"The candidate tried hard to persuade the local electorate.","translation":"候補者は地元の有権者（選挙民）を説得しようと必死だった。"},
+                {"word":"Campaign","meaning":"選挙運動、キャンペーン","sentence":"The politician started his election campaign in urban areas.","translation":"その政治家は都市部で選挙運動を開始した。"},
+                {"word":"Parliament","meaning":"国会、議会（英など）","sentence":"The prime minister addressed the parliament on the budget deficit.","translation":"首相は予算赤字に関して国会（議会）で演説した。"},
+                {"word":"Congress","meaning":"国会、議会（米など）","sentence":"The US Congress voted to approve financial aid for the region.","translation":"米国議会は、その地域への財政支援を承認することを決議した。"},
+                {"word":"Senate","meaning":"上院","sentence":"The Senate reviewed the proposal to increase consumption tax.","translation":"上院は消費税率を引き上げる提案を再検討した。"},
+                {"word":"Embassy","meaning":"大使館、使節","sentence":"Please contact the Japanese embassy if you lose your passport.","translation":"パスポートを紛失した場合は日本大使館に連絡してください。"},
+                {"word":"Diplomacy","meaning":"外交、外交手腕","sentence":"The conflict was resolved peacefully through international diplomacy.","translation":"その紛争は国際的な外交によって平和的に解決された。"},
+                {"word":"Treaty","meaning":"条約、合意文書","sentence":"The two nations signed a historic peace treaty in Tokyo.","translation":"両国は東京で歴史的な平和条約に署名した。"},
+                {"word":"Alliance","meaning":"同盟、協調","sentence":"The economic alliance enhanced global commerce between members.","translation":"その経済同盟は、加盟国間の世界的な商業を高めた。"},
+                {"word":"Sanction","meaning":"制裁、認可、制裁を科す","sentence":"The UN imposed economic sanctions to stop the border hostility.","translation":"国連は、国境での敵対行為を止めるために経済制裁を課した。"},
+                {"word":"Sovereignty","meaning":"独立権","sentence":"The nation fought desperately to defend its territorial sovereignty.","translation":"その国家は領土の独立（主権）を守るために必死に戦った。"},
+                {"word":"Globalisation","meaning":"グローバル化","sentence":"Globalisation has changed how local businesses handle commerce.","translation":"グローバル化（世界一体化）は、地元の企業が商業を扱う方法を変えた。"},
+                {"word":"Migration","meaning":"移住、渡り（鳥などの）","sentence":"The study analyzed patterns of human migration across continents.","translation":"その研究は大陸を越えた人類の移住のパターンを分析した。"},
+                {"word":"Refugee","meaning":"難民、避難民","sentence":"The organization provided food and clean water to the refugees.","translation":"その組織は難民に食料と清潔な水を提供した。"},
+                {"word":"Integration","meaning":"統合、人種差別撤廃","sentence":"The program promotes the social integration of foreign residents.","translation":"そのプログラムは、外国人住民の社会的な統合を促進している。"},
+                {"word":"Diversity","meaning":"多様性","sentence":"We respect diversity of opinions inside the research center.","translation":"私たちは研究センター内での意見の多様性を尊重している。"},
+                {"word":"Equality","meaning":"平等、同一","sentence":"Gender equality is a core value of modern human rights.","translation":"ジェンダー平等（男女同権）は現代の人権における極めて重要な価値観だ。"},
+                {"word":"Justice","meaning":"正義、公正、裁判","sentence":"The lawyer dedicated his career to fighting for absolute justice.","translation":"その弁護士は、絶対的な正義のために戦うことにキャリアを捧げた。"},
+                {"word":"Liberty","meaning":"自由、解放","sentence":"The constitution guarantees the personal liberty of every citizen.","translation":"憲法はすべての市民の個人的な自由を保証している。"},
+                {"word":"Humanity","meaning":"人間性、人類、人道","sentence":"Climate change poses a potential threat to all of humanity.","translation":"気候変動は全人類（人間社会）にとって潜在的な脅威となっている。"},
+                {"word":"Poverty","meaning":"貧困、不足","sentence":"Providing high-quality education is key to reducing poverty.","translation":"高品質な教育を提供することが貧困削減の鍵だ。"},
+                {"word":"Wealth","meaning":"富、豊かな富","sentence":"The dynamic state of the market caused a major shift in wealth.","translation":"市場の流動的な状態が、富の大きな変化を引き起こした。"},
+                {"word":"Famine","meaning":"飢饉、極度な不足","sentence":"The severe dry weather conditions caused a widespread famine.","translation":"激しい乾燥気候（天候状態）が広範囲な飢饉を引き起こした。"},
+                {"word":"Conflict","meaning":"対立、不一致","sentence":"We must try a diplomatic approach to resolve the border conflict.","translation":"国境での対立を解決するために、私たちは外交的なアプローチを試みなければならない。"},
+                {"word":"Territory","meaning":"領土、領域","sentence":"The two countries disputed over the small island territory.","translation":"両国はその小さな島領土を巡って論争した。"},
+                {"word":"Border","meaning":"国境、境界、縁","sentence":"Custom officials inspect all vehicles at the national border.","translation":"税関の職員は国境で（境界）すべての車両を検査する。"},
+                {"word":"Security","meaning":"安全保障、警備","sentence":"The UN Security Council held a seminar about space weapons.","translation":"国連安全保障理事会は宇宙兵器に関するセミナーを開催した。"},
+                {"word":"Peacekeeping","meaning":"平和維持活動","sentence":"The nation contributed soldiers to the UN peacekeeping mission.","translation":"その国家は国連の平和維持活動（ミッション）に兵士を拠出した。"},
+                {"word":"Hostility","meaning":"敵対行為、反対","sentence":"The treaty led to an immediate suspension of military hostilities.","translation":"条約により、軍事的な敵対行為は即座に停止された。"},
+                {"word":"Crisis","meaning":"危機、重大局面","sentence":"The government held an emergency meeting to solve the energy crisis.","translation":"政府はエネルギー危機を解決するために緊急会議を開催した。"},
+                {"word":"Inflation","meaning":"インフレ、通貨膨張","sentence":"The rise in crude oil prices caused a sharp increase in inflation.","translation":"原油価格の上昇がインフレの急激な上昇を引き起こした。"},
+                {"word":"Recession","meaning":"不況、景気後退","sentence":"Many small companies closed down during the global recession.","translation":"世界的な不況（景気後退）の間に多くの小規模企業が倒産した。"},
+                {"word":"Deficit","meaning":"赤字","sentence":"The government proposed cutting public expenses to reduce the deficit.","translation":"政府は赤字を減らすために公共支出の削減を提案した。"},
+                {"word":"Surplus","meaning":"黒字","sentence":"The trade surplus rose because domestic products sold well abroad.","translation":"国内製品が海外でよく売れたため、貿易黒字が上昇した。"},
+                {"word":"Tariff","meaning":"関税","sentence":"Imposing high tariffs can trigger a conflict between trade partners.","translation":"高い関税を課すことは貿易相手国との間に対立を引き起こしかねない。"},
+                {"word":"Subsidy","meaning":"補助金","sentence":"The local council provides subsidies to encourage solar power.","translation":"地方議会は太陽光発電を奨励するために補助金を提供している。"},
+                {"word":"Infrastructure","meaning":"基礎インフラ","sentence":"Upgrading transport infrastructure requires a considerable budget.","translation":"交通インフラをアップグレードすることはかなりの予算を必要とする。"},
+                {"word":"Trade","meaning":"貿易、取引、交換する","sentence":"The trade agreement removed tariffs on agricultural goods.","translation":"貿易協定により農産物に対する関税が撤廃された。"},
+                {"word":"Industry","meaning":"産業、製造業","sentence":"The automobile industry is experiencing a rapid technological evolution.","translation":"自動車産業は急速な技術的進化を経験している。"},
+                {"word":"Commerce","meaning":"商業","sentence":"The city has been a prosperous center of international commerce.","translation":"その都市は国際的な商業の繁栄した中心地であり続けてきた。"},
+                {"word":"Labor","meaning":"労働力、労使関係","sentence":"The agricultural sector is facing severe labor shortages.","translation":"農業分野は深刻な労働力不足（労働問題）に直面している。"},
+                {"word":"Welfare","meaning":"社会的福祉、幸福","sentence":"The government plans to enhance the welfare system for the elderly.","translation":"政府は高齢者向けの福祉（保護制度）を強化する計画だ。"},
+                {"word":"Pension","meaning":"年金","sentence":"Writers worry about their future pension after retiring.","translation":"作家たちは引退した後の将来の年金について心配している。"},
+                {"word":"Healthcare","meaning":"医療、ヘルスケア","sentence":"The state budget allocated substantial funds to public healthcare.","translation":"州の予算は公共医療（ヘルスケア）に多大な資金を割り当てた。"},
+                {"word":"Education","meaning":"教育","sentence":"Access to primary education is a fundamental right of every child.","translation":"初等教育（小学校教育）へのアクセスは、すべての子供の根本的な権利だ。"},
+                {"word":"Literacy","meaning":"読み書きの能力、活用能力","sentence":"The program successfully enhanced the adult literacy rate.","translation":"そのプログラムは、成人の読み書き能力（リテラシー）率を向上させることに成功した。"},
+                {"word":"Sanitation","meaning":"衛生、下水処理","sentence":"Improving sanitation is crucial to prevent the spread of virus.","translation":"ウイルスの拡散を防ぐためには、衛生環境（下水等）を改善することが極めて重要だ。"},
+                {"word":"Pollution","meaning":"公害、汚染","sentence":"The factory complied with regulations to control water pollution.","translation":"工場は水質汚染を制御するための規則（規制）に従った。"},
+                {"word":"Conservation","meaning":"自然保護","sentence":"The group advocates for the conservation of maritime resources.","translation":"その団体は、海洋資源の保全（自然保護）を提唱している。"},
+                {"word":"Sustainability","meaning":"環境持続性","sentence":"Developing renewable energy is essential for environmental sustainability.","translation":"再生可能エネルギーを開発することは、環境の持続可能性にとって不可欠だ。"},
+                {"word":"Development","meaning":"開発、発展","sentence":"The UN supports sustainable economic development in rural towns.","translation":"国連は地方の町における持続可能な経済開発を支援している。"},
+                {"word":"Aid","meaning":"援助、助け、援助する","sentence":"The organization sent humanitarian aid to the earthquake area.","translation":"その組織は地震の被災地域に人道援助を送った。"},
+                {"word":"Charity","meaning":"慈善、慈善団体","sentence":"The concert raised a considerable amount of money for charity.","translation":"コンサートは慈善活動（チャリティ）のためにかなりの額のお金を集めた。"},
+                {"word":"Philanthropy","meaning":"社会貢献活動、フィランソロピー","sentence":"The billionaire dedicated his wealth to global medical philanthropy.","translation":"その大富豪は自身の富を世界的な医療貢献活動（フィランソロピー）に捧げた。"},
+                {"word":"Advocacy","meaning":"擁護、主張、弁護","sentence":"The group focuses on patient advocacy in the medical system.","translation":"その団体は、医療制度における患者の権利擁護（主張）に焦点を当てている。"},
+                {"word":"Activism","meaning":"社会活動、アクティビズム","sentence":"Environmental activism plays a core role in changing policy.","translation":"環境活動（アクティビズム）は、政策変更において中心的な役割を果たす。"},
+                {"word":"Protest","meaning":"抗議、抗議する","sentence":"Residents held a peaceful protest against the construction of the factory.","translation":"住民は工場の建設に対して平和的な抗議を行った。"},
+                {"word":"Strike","meaning":"ストライキ、打撃、打つ","sentence":"The labor union decided to start a strike for higher wages.","translation":"労働組合は、賃金引き上げを求めてストライキを開始することを決定した。"},
+                {"word":"Boycott","meaning":"ボイコット、不買運動","sentence":"Consumers organized a boycott of products from polluting firms.","translation":"消費者は汚染を行っている企業の製品の不買運動（ボイコット）を組織した。"},
+                {"word":"Sovereign","meaning":"統治者、最高権力者","sentence":"The Queen remains the nominal sovereign of the Commonwealth.","translation":"女王は依然として連邦の公称の君主（統治者）である。"},
+                {"word":"Treaty","meaning":"協定","sentence":"The environmental treaty aims to limit the global temperature rise.","translation":"環境協定は、地球規模の気温上昇を制限することを目指している。"},
+                {"word":"Alliance","meaning":"協力関係","sentence":"The political parties formed a tight alliance to pass the law.","translation":"各政党は、その法律を可決するために固い協力関係（同盟）を結んだ。"},
+                {"word":"Sanction","meaning":"罰則、公認","sentence":"The court can impose severe sanctions for violating copyright laws.","translation":"裁判所は著作権法の違反に対して厳しい罰則（制裁）を課すことができる。"},
+                {"word":"Integration","meaning":"社会同化","sentence":"Successful integration requires educational support for immigrant children.","translation":"統合を成功させるには、移民の子供に対する教育的支援が必要だ。"},
+                {"word":"Diversity","meaning":"種、種類の多さ","sentence":"The dynamic forest is famous for its great diversity of plant species.","translation":"その豊かな森は、植物の種の多様性（種類の多さ）で有名だ。"},
+                {"word":"Migration","meaning":"移動","sentence":"The autumn migration of birds is a remarkable natural phenomenon.","translation":"鳥の秋の渡り（移動）は、注目すべき自然現象だ。"},
+                {"word":"Poverty","meaning":"貧窮","sentence":"Many families fell into poverty during the economic recession.","translation":"経済不況の間に多くの家族が貧困に陥った。"},
+                {"word":"Famine","meaning":"飢餓","sentence":"The international community sent immediate food aid to stop the famine.","translation":"国際社会は飢饉を止めるために即座の食料援助を送った。"},
+                {"word":"Crisis","meaning":"ピンチ","sentence":"The captain handled the crisis calmly and saved the passengers.","translation":"船長は危機（ピンチ）に冷静に対処し、乗客を救った。"},
+                {"word":"Inflation","meaning":"物価上昇","sentence":"Central banks use interest rates to control economic inflation.","translation":"中央銀行はインフレ（急激な物価上昇）を制御するために金利を利用する。"},
+                {"word":"Recession","meaning":"景気後退期","sentence":"The housing market suffered a sharp decline during the recession.","translation":"不況期に住宅市場は急激な下落を被った。"},
+                {"word":"Tariff","meaning":"輸出品税","sentence":"The trade agreement aim to eliminate tariffs entirely in ten years.","translation":"その貿易協定は、10年間で関税を完全に撤廃することを目指している。"},
+                {"word":"Subsidy","meaning":"政府補助金","sentence":"The government reduces subsidies for fossil fuels to protect climate.","translation":"地球を守るために、政府は化石燃料に対する補助金を削減している。"},
+                {"word":"Welfare","meaning":"保護","sentence":"The animal welfare group rescued the abandoned domestic pets.","translation":"動物愛護（福祉）団体は、捨てられた家庭用ペットを保護した。"},
+                {"word":"Labor","meaning":"労働活動","sentence":"May Day is celebrated in many countries to honor human labor.","translation":"メーデーは労働活動を称えるために多くの国で祝われる。"},
+                {"word":"Literacy","meaning":"基礎能力、活用力","sentence":"Computers are essential, so digital literacy has become a core requirement.","translation":"コンピューターが不可欠となったため、デジタル能力（活用力）は中心的な要求となった。"},
+                {"word":"Aid","meaning":"応急器具、助け","sentence":"Every classroom is equipped with a basic first aid kit.","translation":"すべての教室に基本的な救急用具（ファーストエイドキット）が備え付けられている。"},
+                {"word":"Charity","meaning":"施し、親切心","sentence":"She operates from pure charity and never asks for compensation.","translation":"彼女は純粋な親切心（慈善心）から行動しており、代償（見返り）を求めることは決してない。"},
+                {"word":"Protest","meaning":"抗議の意思","sentence":"The student walked out of the classroom in protest of the grade.","translation":"その生徒は成績に対する抗議として教室から退出した。"},
+                {"word":"Strike","meaning":"衝突、直撃する","sentence":"The local area is vulnerable to storms that strike in September.","translation":"地方の地域は、9月に直撃する（襲う）嵐に弱い。"},
+                {"word":"Refugee","meaning":"被災民","sentence":"The state provided temporary housing facilities for the flood refugees.","translation":"州は、洪水被災民（避難者）のために一時的な住宅施設を提供した。"},
+                {"word":"Congress","meaning":"学会、会議","sentence":"The international medical congress was held in Tokyo last winter.","translation":"昨年の冬、東京で国際医学会議（学会）が開催された。"},
+                {"word":"Legislation","meaning":"制定法","sentence":"The new safety legislation will be active from next April.","translation":"新しい安全法（制定法）は来年4月から施行（有効）される。"}
+            ],
+            pack11: [
+                {"word":"Abundance","meaning":"豊富さ、過分な量","sentence":"The volcanic island has an abundance of natural hot springs.","translation":"その火山島には豊富な（過分な量の）自然の温泉がある。"},
+                {"word":"Scarcity","meaning":"不足、欠乏","sentence":"The scarcity of fresh water is a severe threat to local health.","translation":"真水の不足（欠乏）は地域の健康にとって深刻な脅威だ。"},
+                {"word":"Ambiguity","meaning":"曖昧さ、複数の意味","sentence":"The ambiguity of the novel's ending left readers confused.","translation":"その小説の結末の曖昧さは読者を混乱させた。"},
+                {"word":"Clarity","meaning":"明確さ、明瞭さ","sentence":"Adding illustrations can enhance the clarity of the text.","translation":"イラストを加えることで文章の明確さを高めることができる。"},
+                {"word":"Complexity","meaning":"複雑さ、複雑性","sentence":"The complexity of the human brain still puzzles researchers.","translation":"人間の脳の複雑さは依然として研究者たちを悩ませている。"},
+                {"word":"Simplicity","meaning":"単純さ、簡素さ","sentence":"The programmer praised the simplicity of the search algorithm.","translation":"プログラマーはその検索アルゴリズムの単純（簡素）さを称賛した。"},
+                {"word":"Diversity","meaning":"多様性、雑多さ","sentence":"The program designed to respect the diversity of human cultures.","translation":"そのプログラムは人間の文化の多様性を尊重するために設計された。"},
+                {"word":"Uniformity","meaning":"均一性、一様さ","sentence":"Industrial production prioritizes the uniformity of goods.","translation":"工業生産は製品の均一性（一定さ）を優先する。"},
+                {"word":"Stability","meaning":"安定、安定性","sentence":"Economic stability is essential for consistent social welfare.","translation":"一貫した社会福祉には経済の安定が不可欠だ。"},
+                {"word":"Instability","meaning":"不安定、不安定性","sentence":"The instability of the weather made predictions difficult.","translation":"天候の不安定さが予測を困難にした。"},
+                {"word":"Continuity","meaning":"継続性、一貫性","sentence":"The new policy ensures the continuity of medical research.","translation":"新しい方針は医療研究の継続性を保証する。"},
+                {"word":"Discontinuity","meaning":"不連続性、途切れ","sentence":"The line graph highlights a sharp discontinuity in the statistics.","translation":"折れ線グラフは統計の劇的な不連続性（途切れ）を強調している。"},
+                {"word":"Integration","meaning":"統合、統一","sentence":"The integration of technology into schools changed education.","translation":"学校へのテクノロジーの統合（導入）は教育を変えた。"},
+                {"word":"Fragmentation","meaning":"断片化、分裂","sentence":"The fragmentation of the database caused major software errors.","translation":"データベースの断片化（分裂）が重大なシステムエラーを引き起こした。"},
+                {"word":"Adaptability","meaning":"適応力、順応性","sentence":"The species survived due to its amazing genetic adaptability.","translation":"その種は驚くべき遺伝的適応力のおかげで生き延びた。"},
+                {"word":"Rigidity","meaning":"堅さ、硬直性、柔軟性のなさ","sentence":"The rigidity of the school rules confused the transfer student.","translation":"学校規則の硬直性（柔軟性のなさ）は転校生を混乱させた。"},
+                {"word":"Resilience","meaning":"回復力、弾力性","sentence":"The community showed great resilience after the severe storm.","translation":"地域社会は激しい嵐の後、素晴らしい回復力を示した。"},
+                {"word":"Vulnerability","meaning":"脆弱性、傷つきやすさ","sentence":"The small island is famous for its ecological vulnerability.","translation":"その小さな島は生態学的な脆弱性で有名だ。"},
+                {"word":"Feasibility","meaning":"実現可能性、妥当性","sentence":"The team conducted a study to evaluate the project's feasibility.","translation":"チームはプロジェクトの実現可能性を評価するために調査を行った。"},
+                {"word":"Plausibility","meaning":"妥当性、もっともらしさ","sentence":"The scientific proof enhanced the plausibility of his theory.","translation":"科学的な証拠が彼の理論の妥当性を高めた。"},
+                {"word":"Inherent","meaning":"本来備わっている","sentence":"There are inherent risks in using non-certified software.","translation":"非公認のソフトウェアを使用することには本来備わっているリスクがある。"},
+                {"word":"Abstract","meaning":"抽象的な","sentence":"Mathematics often deals with highly abstract concepts.","translation":"数学はしばしば高度に抽象的な概念を扱う。"},
+                {"word":"Concrete","meaning":"具体的な","sentence":"Please provide a concrete example to illustrate your meaning.","translation":"あなたの言いたいことを説明するために具体的な例を挙げてください。"},
+                {"word":"Relative","meaning":"相対的な","sentence":"The relative advantage of the method is its low cost.","translation":"その手法の相対的な利点は低コストであることだ。"},
+                {"word":"Absolute","meaning":"絶対的な","sentence":"There is no absolute proof that the theory is correct.","translation":"その理論が正しいという絶対的な証明はない。"},
+                {"word":"Objective","meaning":"客観的な","sentence":"The study aims to provide an objective analysis of data.","translation":"その研究はデータの客観的な分析を提供することを目指している。"},
+                {"word":"Subjective","meaning":"主観的な","sentence":"Evaluating art involves highly subjective preferences.","translation":"芸術の評価には非常に主観的な好みが含まれる。"},
+                {"word":"Relevant","meaning":"関連する","sentence":"Please submit only the documents relevant to your application.","translation":"申請に関連する書類のみを提出してください。"},
+                {"word":"Irrelevant","meaning":"無関係な","sentence":"His comments during the debate were completely irrelevant.","translation":"討論中の彼のコメントは完全に無関係だった。"},
+                {"word":"Specific","meaning":"特定の","sentence":"The law targets specific categories of import tariffs.","translation":"その法律は輸入関税の特定のカテゴリーを対象としている。"},
+                {"word":"General","meaning":"一般的な","sentence":"The textbook gives a general overview of physical science.","translation":"その教科書は物理科学の一般的な概観を与えている。"},
+                {"word":"Dynamic","meaning":"動的な、精力的な","sentence":"The presenter gave a dynamic speech about space technology.","translation":"その発表者は宇宙技術に関する精力的なスピーチを行った。"},
+                {"word":"Static","meaning":"静的な、変化のない、静電気","sentence":"The population of the town remained static for a decade.","translation":"その町の人口は10年間変化のない（静的）状態のままだった。"},
+                {"word":"Consistent","meaning":"一貫した","sentence":"Her high scores are consistent with her study habits.","translation":"彼女の高い得点は彼女の学習習慣と一貫している。"},
+                {"word":"Inconsistent","meaning":"一貫性のない、矛盾する","sentence":"His behavior was inconsistent with his previous statements.","translation":"彼の行動は以前の彼の発言と一貫性がなかった。"},
+                {"word":"Compatible","meaning":"互換性のある、気が合う","sentence":"The security software is compatible with most mobile devices.","translation":"そのセキュリティソフトはほとんどのモバイル機器と互換性がある。"},
+                {"word":"Incompatible","meaning":"互換性のない、不調和な","sentence":"His radical ideas were incompatible with the school rules.","translation":"彼の急進的なアイデアは学校の規則と相容れない（互換性がない）ものだった。"},
+                {"word":"Valid","meaning":"有効な、妥当な","sentence":"The test results are valid for exactly twelve months.","translation":"そのテスト結果はちょうど12ヶ月間有効だ。"},
+                {"word":"Invalid","meaning":"無効な","sentence":"The experiment was invalid due to a serious error in step one.","translation":"第1段階での重大な誤りのため、その実験は無効だった。"},
+                {"word":"Empirical","meaning":"実験に基づいた、経験的な","sentence":"The theory is supported by a wealth of empirical evidence.","translation":"その理論は豊富な実験に基づいた証拠によって支持されている。"},
+                {"word":"Hypothetical","meaning":"仮定の","sentence":"Let's consider a hypothetical situation where prices double.","translation":"物価が2倍になるという仮定の状況を考えてみよう。"},
+                {"word":"Subtle","meaning":"微妙な","sentence":"We observed a subtle change in the temperature of the river.","translation":"私たちは川の温度の微妙な変化を観察した。"},
+                {"word":"Profound","meaning":"深い、深刻な","sentence":"The discovery had a profound impact on advanced physics.","translation":"その発見は高等物理学に深い影響を与えた。"},
+                {"word":"Superficial","meaning":"表面的な","sentence":"The student had only a superficial understanding of history.","translation":"その生徒は歴史に関する表面的な理解しか持っていなかった。"},
+                {"word":"Comprehensive","meaning":"包括的な","sentence":"The brochure provides a comprehensive list of school facilities.","translation":"パンフレットは学校の施設の包括的なリストを提供している。"},
+                {"word":"Selective","meaning":"選択的な、厳選された","sentence":"The university is highly selective in admitting new candidates.","translation":"その大学は新しい志願者の受け入れに関して非常に選択的だ。"},
+                {"word":"Arbitrary","meaning":"任意の、独断的な","sentence":"The decision to cancel the project was purely arbitrary.","translation":"プロジェクトを中止する決定は完全に独断的なものだった。"},
+                {"word":"Systematic","meaning":"体系的な","sentence":"We need a systematic approach to check database safety.","translation":"データベースの安全性を確認するために体系的なアプローチが必要だ。"},
+                {"word":"Pragmatic","meaning":"現実的な、実利主義の","sentence":"They adopted a pragmatic strategy to reduce the budget deficit.","translation":"彼らは予算の赤字を削減するために現実的な戦略を採用した。"},
+                {"word":"Theoretical","meaning":"理論上の","sentence":"This research is purely theoretical and has no practical use today.","translation":"この研究は完全に理論上のものであり、現在の実用的な用途はない。"}
+            ],
+            pack12: [
+                {"word":"Perspective","meaning":"ものの見方、視点、遠近法","sentence":"The seminar gave me a completely new perspective on history.","translation":"そのゼミは私に歴史に対する完全に新しいものの見方（視点）を与えてくれた。"},
+                {"word":"Perception","meaning":"知覚、認識、印象","sentence":"The study analyzed public perception of climate risks.","translation":"その研究は気候リスクに対する人々の認識を分析した。"},
+                {"word":"Cognition","meaning":"認知、認識力","sentence":"Cognition develops rapidly during early childhood.","translation":"幼児期に認知（認識力）は急速に発達する。"},
+                {"word":"Intuition","meaning":"直感、直観力","sentence":"The scientist relied on his intuition to find a solution.","translation":"科学者は解決策を見つけるために自身の直感に依存した。"},
+                {"word":"Reasoning","meaning":"論理的思考、推理","sentence":"His legal reasoning was praised by the entire court.","translation":"彼の法的な論理的思考は裁判所全体から称賛された。"},
+                {"word":"Assumption","meaning":"想定、思い込み、仮定","sentence":"We must check the accuracy of our primary assumption.","translation":"私たちは最初の想定（仮定）の正確性を確認しなければならない。"},
+                {"word":"Inference","meaning":"推論、推量","sentence":"The detective made a logical inference based on evidence.","translation":"探偵は証拠に基づいて論理的な推論を行った。"},
+                {"word":"Deduction","meaning":"控除、推論（演繹）","sentence":"The tax deduction applies to low-income families.","translation":"その税金控除は低所得世帯に適用される。"},
+                {"word":"Induction","meaning":"帰納、誘導、就任式","sentence":"Scientific theories often rely on the process of induction.","translation":"科学的理論はしばしば帰納（複数の事実からの推論）のプロセスに依存する。"},
+                {"word":"Speculation","meaning":"憶測、投機、推測","sentence":"There is a lot of speculation about the project's cost.","translation":"プロジェクトの費用に関しては多くの憶測（推測）がある。"},
+                {"word":"Hypothesis","meaning":"仮説、仮定","sentence":"The experiment confirmed the validity of his hypothesis.","translation":"その実験は彼の仮説の妥当性を確認した。"},
+                {"word":"Theory","meaning":"理論、学説","sentence":"The evolutionary theory changed how we view biological species.","translation":"進化理論（進化論）は私たちが生物の種を見る目を変えた。"},
+                {"word":"Principle","meaning":"原理、原則、主義","sentence":"The device operates on a simple physical principle.","translation":"その装置は単純な物理的原理に基づいて作動する。"},
+                {"word":"Concept","meaning":"概念、観念","sentence":"Language acquisition is a complex psychological concept.","translation":"言語習得は複雑な心理学的概念だ。"},
+                {"word":"Paradigm","meaning":"枠組み、パラダイム、模範","sentence":"The development of AI caused a paradigm shift in education.","translation":"AIの開発は教育におけるパラダイムシフト（枠組みの大改革）を引き起こした。"},
+                {"word":"Dimension","meaning":"次元、側面、寸法","sentence":"There is an international dimension to the trade conflict.","translation":"その貿易対立には国際的な側面がある。"},
+                {"word":"Parameter","meaning":"要因、制限範囲、パラメータ","sentence":"The programmers set strict safety parameters for the server.","translation":"プログラマーはサーバーに厳格な安全パラメータ（制限範囲）を設定した。"},
+                {"word":"Framework","meaning":"枠組み、構造","sentence":"The treaty provides a framework for future space research.","translation":"その条約は将来の宇宙研究の枠組みを提供している。"},
+                {"word":"Structure","meaning":"構造、建造物","sentence":"The course analyzes the internal structure of chemical entities.","translation":"そのコースは化学物質の内部構造を分析する。"},
+                {"word":"System","meaning":"体系、制度、装置","sentence":"The legal system must guarantee equality for all citizens.","translation":"法律制度（体系）はすべての市民の平等を保証しなければならない。"},
+                {"word":"Mechanism","meaning":"仕組み、構造、メカニズム","sentence":"Scientists studied the transmission mechanism of the virus.","translation":"科学者たちはウイルスの伝播メカニズム（仕組み）を研究した。"},
+                {"word":"Process","meaning":"過程、工程、処理する","sentence":"Memories undergo a gradual process of consolidation.","translation":"記憶は徐々に定着する過程（プロセス）をたどる。"},
+                {"word":"Procedure","meaning":"手続き、手順","sentence":"The application procedure is simple and straightforward.","translation":"その申請手続き（手順）は簡単でわかりやすい。"},
+                {"word":"Method","meaning":"方法、手法","sentence":"We adopted a new method to reduce carbon emissions.","translation":"私たちは炭素排出量を削減するために新しい方法を採用した。"},
+                {"word":"Technique","meaning":"技術、手法、テクニック","sentence":"The surgeon demonstrated an advanced medical technique.","translation":"その外科医は高度な医療技術（手法）を実演した。"},
+                {"word":"Approach","meaning":"取り組み、アプローチ、接近する","sentence":"The school needs a new approach to teach mathematics.","translation":"学校は数学を教えるための新しいアプローチ（取り組み）を必要としている。"},
+                {"word":"Strategy","meaning":"戦略、計画","sentence":"The firm launched a dynamic marketing strategy online.","translation":"その会社はオンラインで精力的なマーケティング戦略を展開した。"},
+                {"word":"Policy","meaning":"政策、方針","sentence":"The government announced a radical policy on renewable energy.","translation":"政府は再生可能エネルギーに関する急進的な政策を発表した。"},
+                {"word":"Regulation","meaning":"規制、ルール","sentence":"The safety regulation is designed to protect factory workers.","translation":"その安全規制（ルール）は工場の労働者を保護するために設計されている。"},
+                {"word":"Standard","meaning":"基準、標準、標準的な","sentence":"The software complies with global industry standards.","translation":"そのソフトウェアは世界の業界基準に適合している。"},
+                {"word":"Criterion","meaning":"基準、尺度（複数形はcriteria）","sentence":"Passing the mock test is a key criterion for scholarship.","translation":"模試に合格することは、奨学金を得るための主要な基準だ。"},
+                {"word":"Index","meaning":"指標、索引、指数","sentence":"The life index suggests high satisfaction in rural towns.","translation":"生活指標は、地方の町での高い満足度を示唆している。"},
+                {"word":"Indicator","meaning":"兆候、指標、計器","sentence":"High electricity use is an indicator of domestic economic growth.","translation":"高い電力消費は国内の経済成長の指標（兆候）だ。"},
+                {"word":"Measure","meaning":"対策、測定する、寸法","sentence":"The council took drastic measures to control air pollution.","translation":"議会は大気汚染を制御するために劇的な対策を講じた。"},
+                {"word":"Scale","meaning":"規模、縮尺、はかり、よじ登る","sentence":"The research was conducted on a nationwide scale.","translation":"その研究は全国的な規模で行われた。"},
+                {"word":"Scope","meaning":"範囲、余地、視野","sentence":"The study of absolute time travel is outside the scope of physics.","translation":"絶対的なタイムトラベルの研究は物理学の範囲外だ。"},
+                {"word":"Range","meaning":"範囲、及ぶ、整列させる","sentence":"The test scores range from sixty to ninety-five points.","translation":"テストの得点は60点から95点の範囲に及ぶ。"},
+                {"word":"Limit","meaning":"限界、制限、制限する","sentence":"The library set a limit on the number of books you can borrow.","translation":"図書館は借りられる本の数に制限を設けた。"},
+                {"word":"Boundary","meaning":"境界、限界線","sentence":"A river forms a natural boundary between the two properties.","translation":"川が2つの敷地の間の自然な境界を形成している。"},
+                {"word":"Margin","meaning":"差、余白、マージン","sentence":"Our team won the national match by a small margin.","translation":"私たちのチームは僅かな差（マージン）で全国大会に勝利した。"},
+                {"word":"Gap","meaning":"隔たり、隙間、ギャップ","sentence":"There is a wide digital gap between generations today.","translation":"今日、世代間に大きなデジタル上の隔たり（ギャップ）がある。"},
+                {"word":"Outcome","meaning":"結果、成果","sentence":"The ultimate outcome of the conference was a peace treaty.","translation":"会議の最終的な結果（成果）は平和条約だった。"},
+                {"word":"Consequence","meaning":"必然の結果、重要性","sentence":"Rising sea level is an inevitable consequence of global warming.","translation":"海面の上昇は地球温暖化の避けられない結果だ。"},
+                {"word":"Effect","meaning":"効果、影響、結果","sentence":"Daily reviews have a significant effect on exam scores.","translation":"毎日の復習は試験の得点に著しい効果（影響）をもたらす。"},
+                {"word":"Impact","meaning":"強い影響、衝撃、衝突","sentence":"The internet had an enormous impact on international commerce.","translation":"インターネットは国際商業に莫大な影響を与えた。"},
+                {"word":"Influence","meaning":"影響、及ぼす","sentence":"My biology teacher had a profound influence on my career.","translation":"生物学の先生は私のキャリア選択に深い影響を与えた。"},
+                {"word":"Reaction","meaning":"反応、反動、反発","sentence":"The chemical reaction produced a substantial amount of heat.","translation":"その化学反応はかなりの量の熱を生み出した。"},
+                {"word":"Response","meaning":"応答、反応、返答","sentence":"We received an immediate response to our database inquiry.","translation":"私たちはデータベースへの問い合わせに対して即座の返答（反応）を受け取った。"},
+                {"word":"Feedback","meaning":"評価、フィードバック、意見","sentence":"Positive feedback from users boosted our motivation.","translation":"ユーザーからの肯定的なフィードバック（評価意見）が私たちのやる気を高めた。"},
+                {"word":"Interaction","meaning":"相互作用、交流","sentence":"The program enhances interaction between transfer students.","translation":"そのプログラムは転校生同士の交流（相互作用）を高める。"}
+            ]
+        };
+
+        let currentPackKey = 'pack10';
+        let words = [];
+        let unclearWordMap = {};
+        let playbackMode = 'all';
+        let currentIndex = 0;
+        let isAutoPlay = true;
+        let speechRate = 1.0;
+        let autoPlayInterval = 1500;
+        let currentUtterance = null;
+        let activeTimeout = null;
+        let voices = [];
+        let currentStep = 0;
+        let isPlaying = false;
+        let isPaused = false;
+
+        function loadUnclearData() { try { const data = localStorage.getItem('gt_unclear_p4'); if (data) unclearWordMap = JSON.parse(data); } catch (e) {} }
+        function saveUnclearData() { try { localStorage.setItem('gt_unclear_p4', JSON.stringify(unclearWordMap)); } catch (e) {} }
+        function initVoices() { voices = window.speechSynthesis.getVoices(); if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = () => { voices = window.speechSynthesis.getVoices(); }; }
+        function getVoiceForLang(langCode) { const list = voices.length > 0 ? voices : window.speechSynthesis.getVoices(); let v = list.find(x => x.lang === langCode); return v || list.find(x => x.lang.startsWith(langCode.split('-')[0])); }
+
+        function speak(text, lang, callback) {
+            window.speechSynthesis.cancel();
+            if (activeTimeout) clearTimeout(activeTimeout);
+            if (!text) { if (callback) callback(); return; }
+            setTimeout(() => {
+                const u = new SpeechSynthesisUtterance(text);
+                u.rate = speechRate;
+                const v = getVoiceForLang(lang);
+                if (v) u.voice = v; else u.lang = lang;
+                window.activeUtterance = u;
+                u.onend = () => { window.activeUtterance = null; setTimeout(() => { if (callback) callback(); }, 120); };
+                u.onerror = () => { window.activeUtterance = null; setTimeout(() => { if (callback) callback(); }, 120); };
+                window.speechSynthesis.speak(u);
+            }, 120);
+        }
+
+        function changeLearningPack() {
+            stopSpeaking();
+            currentPackKey = document.getElementById('select-pack').value;
+            words = packs[currentPackKey] ? [...packs[currentPackKey]] : [];
+            currentIndex = 0;
+            playbackMode = 'all';
+            updatePlayerUI();
+            updateModeCounters();
+            if (isAutoPlay && words.length > 0) setTimeout(() => startWordFlow(), 200);
+        }
+
+        function switchTab(tabName) {
+            stopSpeaking();
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('bg-rose-50', 'text-rose-700'); b.classList.add('text-slate-600', 'hover:bg-slate-100'); });
+            const active = document.getElementById(`tab-btn-${tabName}`);
+            active.classList.remove('text-slate-600', 'hover:bg-slate-100'); active.classList.add('bg-rose-50', 'text-rose-700');
+            if (tabName === 'list') renderWordList();
+        }
+
+        function getActiveWords() { return playbackMode === 'unclear' ? words.filter(w => unclearWordMap[w.word] === true) : words; }
+
+        function setPlaybackMode(mode) {
+            stopSpeaking();
+            if (mode === 'unclear' && words.filter(w => unclearWordMap[w.word] === true).length === 0) { alert("わからない登録されている単語がありません。"); return; }
+            playbackMode = mode; currentIndex = 0;
+            const a = document.getElementById('mode-all-btn'), u = document.getElementById('mode-unclear-btn');
+            if (mode === 'all') { a.className = "px-3 py-1 rounded-md text-xs font-semibold bg-white text-rose-600 shadow-sm"; u.className = "px-3 py-1 rounded-md text-xs font-semibold text-slate-600"; }
+            else { a.className = "px-3 py-1 rounded-md text-xs font-semibold text-slate-600"; u.className = "px-3 py-1 rounded-md text-xs font-semibold bg-white text-rose-600 shadow-sm"; }
+            updatePlayerUI(); updateModeCounters();
+            if (isAutoPlay && words.length > 0) startWordFlow();
+        }
+
+        function updateModeCounters() {
+            document.getElementById('count-all-words').innerText = words.length;
+            document.getElementById('count-unclear-words').innerText = words.filter(w => unclearWordMap[w.word] === true).length;
+            document.querySelectorAll('.total-count-badge').forEach(b => b.innerText = words.length);
+        }
+
+        function updatePlayerUI() {
+            if (words.length === 0) return;
+            const active = getActiveWords(), w = active[currentIndex];
+            if (!w) { if (playbackMode === 'unclear') setPlaybackMode('all'); return; }
+            document.getElementById('card-word').innerText = w.word;
+            document.getElementById('card-meaning').innerText = w.meaning;
+            document.getElementById('card-sentence').innerText = w.sentence || "—";
+            document.getElementById('card-translation').innerText = w.translation || "—";
+            document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${active.length}`;
+            document.getElementById('progress-bar').style.width = `${((currentIndex + 1) / active.length) * 100}%`;
+            updateUnclearCardBtn(w.word); resetSectionsVisual();
+        }
+
+        function resetSectionsVisual() { ['section-word', 'section-meaning', 'section-sentence', 'section-translation'].forEach(id => document.getElementById(id).classList.remove('speech-active-section')); }
+        function highlightSection(id) { resetSectionsVisual(); document.getElementById(id).classList.add('speech-active-section'); }
+
+        function updateUnclearCardBtn(word) {
+            const isU = unclearWordMap[word] === true, b = document.getElementById('card-unclear-toggle'), i = document.getElementById('card-unclear-icon'), t = document.getElementById('card-unclear-text');
+            if (isU) { i.className = "fa-solid fa-star text-amber-500"; t.innerText = "わからない登録済"; b.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-semibold shadow-sm"; }
+            else { i.className = "fa-regular fa-star text-slate-400"; t.innerText = "わからない"; b.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-400 text-xs font-semibold shadow-sm"; }
+        }
+
+        function toggleCurrentUnclear() { const active = getActiveWords(), w = active[currentIndex]; if (!w) return; unclearWordMap[w.word] = !unclearWordMap[w.word]; saveUnclearData(); updateUnclearCardBtn(w.word); updateModeCounters(); }
+        function toggleWordUnclear(word) { unclearWordMap[word] = !unclearWordMap[word]; saveUnclearData(); updateModeCounters(); const active = getActiveWords(), w = active[currentIndex]; if (w && w.word === word) updateUnclearCardBtn(word); }
+
+        function speakCurrentPart(part) { stopSpeaking(); const active = getActiveWords(), w = active[currentIndex]; if (!w) return; setTimeout(() => { if (part === 'word') { highlightSection('section-word'); speak(w.word, 'en-US'); } else if (part === 'meaning') { highlightSection('section-meaning'); speak(w.meaning, 'ja-JP'); } else if (part === 'sentence' && w.sentence) { highlightSection('section-sentence'); speak(w.sentence, 'en-US'); } else if (part === 'translation' && w.translation) { highlightSection('section-translation'); speak(w.translation, 'ja-JP'); } }, 100); }
+        function stopSpeaking() { window.speechSynthesis.cancel(); if (activeTimeout) clearTimeout(activeTimeout); isPlaying = false; isPaused = false; currentStep = 0; resetSectionsVisual(); updatePlayButtonUI(); }
+        function pauseSpeaking() { window.speechSynthesis.cancel(); if (activeTimeout) clearTimeout(activeTimeout); isPaused = true; updatePlayButtonUI(); }
+
+        function togglePlayPause() { if (words.length === 0) return; if (!isPlaying) startWordFlow(); else if (isPaused) { isPaused = false; updatePlayButtonUI(); playStep(); } else pauseSpeaking(); }
+
+        function updatePlayButtonUI() {
+            const b = document.getElementById('btn-play-all'); if (!b) return;
+            if (!isPlaying) b.innerHTML = `<i class="fa-solid fa-play"></i><span>再生</span>`;
+            else if (isPaused) b.innerHTML = `<i class="fa-solid fa-play"></i><span>再開</span>`;
+            else b.innerHTML = `<i class="fa-solid fa-pause"></i><span>停止</span>`;
+        }
+
+        function startWordFlow() { if (words.length === 0) return; stopSpeaking(); isPlaying = true; isPaused = false; currentStep = 0; playStep(); }
+
+        function playStep() {
+            if (!isPlaying || isPaused) return; const active = getActiveWords(), w = active[currentIndex]; if (!w) return;
+            let text = "", lang = "", id = "", delay = 1000;
+            switch (currentStep) {
+                case 0: text = w.word; lang = 'en-US'; id = 'section-word'; delay = 800; break;
+                case 1: text = w.meaning; lang = 'ja-JP'; id = 'section-meaning'; delay = w.sentence ? 1000 : autoPlayInterval; break;
+                case 2: text = w.sentence; lang = 'en-US'; id = 'section-sentence'; delay = 800; break;
+                case 3: text = w.translation; lang = 'ja-JP'; id = 'section-translation'; delay = autoPlayInterval; break;
+            }
+            if(!text) {
+                if (currentStep < 3) { currentStep++; playStep(); }
+                else { currentStep = 0; if (isAutoPlay) { nextWord(true); isPlaying = true; playStep(); } else stopSpeaking(); }
+                return;
+            }
+
+            highlightSection(id); updatePlayButtonUI();
+            speak(text, lang, () => {
+                if (!isPlaying || isPaused) return;
+                activeTimeout = setTimeout(() => {
+                    if (currentStep < 3) { currentStep++; playStep(); }
+                    else { currentStep = 0; if (isAutoPlay) { nextWord(true); isPlaying = true; playStep(); } else { stopSpeaking(); } }
+                }, delay);
+            });
+        }
+
+        function toggleAutoPlay() {
+            isAutoPlay = !isAutoPlay; const b = document.getElementById('btn-autoplay'), d = document.getElementById('status-dot'), p = document.getElementById('ping-indicator'), t = document.getElementById('text-autoplay');
+            if (isAutoPlay) { b.className = "px-4 py-1.5 rounded-xl text-sm font-semibold border border-rose-200 bg-rose-50 text-rose-800 flex items-center gap-2"; d.className = "relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-500"; p.classList.remove('hidden'); t.innerText = "自動再生 ON"; if(words.length > 0) startWordFlow(); }
+            else { b.className = "px-4 py-1.5 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-700 flex items-center gap-2"; d.className = "relative inline-flex rounded-full h-3.5 w-3.5 bg-slate-300"; p.classList.add('hidden'); t.innerText = "自動再生 OFF"; stopSpeaking(); }
+        }
+
+        function prevWord() { stopSpeaking(); const active = getActiveWords(); if (active.length === 0) return; currentIndex = currentIndex > 0 ? currentIndex - 1 : active.length - 1; updatePlayerUI(); if (isAutoPlay) setTimeout(() => startWordFlow(), 150); }
+        function nextWord(keep = false) { if (!keep) stopSpeaking(); else { window.speechSynthesis.cancel(); if (activeTimeout) clearTimeout(activeTimeout); currentStep = 0; } const active = getActiveWords(); if (active.length === 0) return; currentIndex = currentIndex < active.length - 1 ? currentIndex + 1 : 0; updatePlayerUI(); }
+        function changeRate() { speechRate = parseFloat(document.getElementById('select-rate').value); }
+        function changeInterval() { autoPlayInterval = parseInt(document.getElementById('select-interval').value); }
+
+        function renderWordList() {
+            const tbody = document.getElementById('word-table-body'); tbody.innerHTML = '';
+            if (words.length === 0) return;
+            words.forEach((w, idx) => {
+                const isU = unclearWordMap[w.word] === true, tr = document.createElement('tr');
+                tr.className = `hover:bg-rose-50/40 cursor-pointer ${currentIndex === idx && playbackMode === 'all' ? 'bg-rose-50/70 font-bold' : ''}`;
+                tr.onclick = (e) => { if (e.target.closest('.unclear-checkbox')) return; playbackMode = 'all'; currentIndex = idx; switchTab('player'); updatePlayerUI(); setTimeout(() => startWordFlow(), 150); };
+                tr.innerHTML = `<td class="py-3 px-4 text-center"><input type="checkbox" ${isU?'checked':''} onchange="toggleWordUnclear('${w.word}')" class="unclear-checkbox w-5 h-5 text-rose-600 rounded"></td><td class="py-3 px-4 font-mono text-xs">${idx+1}</td><td class="py-3 px-4 font-bold text-rose-700">${w.word}</td><td class="py-3 px-4">${w.meaning}</td><td class="py-3 px-4 hidden md:table-cell truncate max-w-xs">${w.sentence || ''}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function startApp() {
+            try { const u = new SpeechSynthesisUtterance(''); u.volume = 0; window.speechSynthesis.speak(u); setTimeout(() => window.speechSynthesis.cancel(), 80); } catch(e) {}
+            document.getElementById('start-overlay').style.display = 'none';
+            words = packs[currentPackKey] ? [...packs[currentPackKey]] : [];
+            updatePlayerUI(); updateModeCounters();
+        }
+
+        window.onload = () => { initVoices(); loadUnclearData(); };
+    </script>
+</body>
+</html>
